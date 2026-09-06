@@ -9,7 +9,7 @@ on:
       version:
         description: "Release version (e.g. 0.1.0)"
         required: false
-        default: "0.1.1-alpha.3"
+        default: "0.1.1-alpha.4"
 
 env:
   CARGO_TERM_COLOR: always
@@ -75,10 +75,12 @@ jobs:
         shell: pwsh
         run: |
           cd dist
-          Get-FileHash -Algorithm SHA256 * | ForEach-Object {
+          $assets = Get-ChildItem -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" }
+          $checksums = $assets | Get-FileHash -Algorithm SHA256 | ForEach-Object {
             "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)"
-          } | Out-File -Encoding utf8 SHA256SUMS.txt
-          cat SHA256SUMS.txt
+          }
+          $checksums | Out-File -Encoding utf8 SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
