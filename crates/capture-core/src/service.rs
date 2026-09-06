@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use domain::Frame;
 use crate::error::CaptureError;
 use crate::types::{CaptureTarget, DisplayInfo, WindowInfo};
+use async_trait::async_trait;
+use domain::Frame;
 
 #[async_trait]
 pub trait CaptureService: Send + Sync {

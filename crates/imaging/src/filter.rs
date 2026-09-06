@@ -79,7 +79,8 @@ pub fn apply_box_blur(frame: &mut Frame, rect: ImagePxRect, radius: u32) {
             let mut count = 0u32;
 
             for dx in -r..=r {
-                let sample_x = (x as i32 + dx).clamp(clamped.x as i32, clamped.right() as i32 - 1) as u32;
+                let sample_x =
+                    (x as i32 + dx).clamp(clamped.x as i32, clamped.right() as i32 - 1) as u32;
                 let offset = (y * frame.stride + sample_x * bytes_per_pixel) as usize;
                 if offset + 3 < frame.pixels.len() {
                     sum_0 += frame.pixels[offset] as u32;
@@ -110,7 +111,8 @@ pub fn apply_box_blur(frame: &mut Frame, rect: ImagePxRect, radius: u32) {
             let mut count = 0u32;
 
             for dy in -r..=r {
-                let sample_y = (y as i32 + dy).clamp(clamped.y as i32, clamped.bottom() as i32 - 1) as u32;
+                let sample_y =
+                    (y as i32 + dy).clamp(clamped.y as i32, clamped.bottom() as i32 - 1) as u32;
                 let offset = (sample_y * frame.stride + x * bytes_per_pixel) as usize;
                 if offset + 3 < temp.len() {
                     sum_0 += temp[offset] as u32;

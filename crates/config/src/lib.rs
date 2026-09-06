@@ -100,18 +100,34 @@ impl Default for UiConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default = "default_version")]
     pub schema_version: u32,
+    #[serde(default)]
     pub hotkeys: HotkeyConfig,
+    #[serde(default)]
     pub output: OutputConfig,
+    #[serde(default)]
     pub ai: AiConfig,
+    #[serde(default)]
     pub ui: UiConfig,
 }
 
 fn default_version() -> u32 {
     1
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            schema_version: default_version(),
+            hotkeys: HotkeyConfig::default(),
+            output: OutputConfig::default(),
+            ai: AiConfig::default(),
+            ui: UiConfig::default(),
+        }
+    }
 }
 
 impl AppConfig {
@@ -123,7 +139,11 @@ impl AppConfig {
     pub fn load() -> Self {
         let path = Self::default_config_path();
         Self::load_from_path(&path).unwrap_or_else(|err| {
-            warn!("Failed to load config from {}: {}. Using defaults.", path.display(), err);
+            warn!(
+                "Failed to load config from {}: {}. Using defaults.",
+                path.display(),
+                err
+            );
             Self::default()
         })
     }

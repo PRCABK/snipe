@@ -40,7 +40,8 @@ impl CommandStack {
     pub fn remove_item(&mut self, id: &str) -> bool {
         if let Some(pos) = self.items.iter().position(|it| it.id == id) {
             let removed = self.items.remove(pos);
-            self.undo_stack.push(AnnotationCommand::Remove(id.to_string(), Some(removed)));
+            self.undo_stack
+                .push(AnnotationCommand::Remove(id.to_string(), Some(removed)));
             self.redo_stack.clear();
             true
         } else {
@@ -80,11 +81,13 @@ impl CommandStack {
             }
             AnnotationCommand::Remove(id, Some(item)) => {
                 self.items.push(item.clone());
-                self.redo_stack.push(AnnotationCommand::Remove(id, Some(item)));
+                self.redo_stack
+                    .push(AnnotationCommand::Remove(id, Some(item)));
             }
             AnnotationCommand::Remove(_, None) => {}
             AnnotationCommand::Clear(old_items) => {
-                self.redo_stack.push(AnnotationCommand::Clear(self.items.clone()));
+                self.redo_stack
+                    .push(AnnotationCommand::Clear(self.items.clone()));
                 self.items = old_items;
             }
         }
@@ -105,12 +108,14 @@ impl CommandStack {
             AnnotationCommand::Remove(id, Some(_)) => {
                 if let Some(pos) = self.items.iter().position(|it| it.id == id) {
                     let removed = self.items.remove(pos);
-                    self.undo_stack.push(AnnotationCommand::Remove(id, Some(removed)));
+                    self.undo_stack
+                        .push(AnnotationCommand::Remove(id, Some(removed)));
                 }
             }
             AnnotationCommand::Remove(_, None) => {}
             AnnotationCommand::Clear(items_to_clear) => {
-                self.undo_stack.push(AnnotationCommand::Clear(self.items.clone()));
+                self.undo_stack
+                    .push(AnnotationCommand::Clear(self.items.clone()));
                 self.items.clear();
                 let _ = items_to_clear;
             }

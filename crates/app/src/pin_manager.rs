@@ -1,6 +1,8 @@
 use domain::Frame;
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
+use std::sync::Arc;
 use tracing::info;
 use ui_slint::{frame_to_slint_image, PinWindow};
 
@@ -12,13 +14,13 @@ pub struct PinnedItem {
 
 #[derive(Clone, Default)]
 pub struct PinManager {
-    pins: Arc<Mutex<HashMap<String, PinnedItem>>>,
+    pins: Rc<RefCell<HashMap<String, PinnedItem>>>,
 }
 
 impl PinManager {
     pub fn new() -> Self {
         Self {
-            pins: Arc::new(Mutex::new(HashMap::new())),
+            pins: Rc::new(RefCell::new(HashMap::new())),
         }
     }
 
@@ -35,8 +37,7 @@ impl PinManager {
         let id_clone = id.clone();
         let pins_clone = self.pins.clone();
         window.on_close_clicked(move || {
-            let mut guard = pins_clone.lock().unwrap();
-            if let Some(item) = guard.remove(&id_clone) {
+            if let Some(item) = pins_clone.borrow_mut().remove(&id_clone) {
                 let _ = item.window.hide();
                 info!("Closed pin window {}", id_clone);
             }
@@ -68,14 +69,13 @@ impl PinManager {
             window,
         };
 
-        self.pins.lock().unwrap().insert(id.clone(), item);
+        self.pins.borrow_mut().insert(id.clone(), item);
         info!("Spawned pin window with id {}", id);
         id
     }
 
     pub fn close_all(&self) {
-        let mut guard = self.pins.lock().unwrap();
-        for (_, item) in guard.drain() {
+        for (_, item) in self.pins.borrow_mut().drain() {
             let _ = item.window.hide();
         }
     }

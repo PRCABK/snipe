@@ -37,7 +37,9 @@ pub fn generate_magnifier(
                 && (sample_x as u32) < frame.width
                 && (sample_y as u32) < frame.height
             {
-                frame.pixel_at(sample_x as u32, sample_y as u32).unwrap_or_default()
+                frame
+                    .pixel_at(sample_x as u32, sample_y as u32)
+                    .unwrap_or_default()
             } else {
                 ColorRgba::new(0, 0, 0, 255)
             };
@@ -55,7 +57,8 @@ pub fn generate_magnifier(
                     let offset = (out_y * stride + out_x * 4) as usize;
 
                     // Draw grid border
-                    let is_border = px == 0 || py == 0 || px == cell_pixels - 1 || py == cell_pixels - 1;
+                    let is_border =
+                        px == 0 || py == 0 || px == cell_pixels - 1 || py == cell_pixels - 1;
                     if is_center && is_border {
                         // High contrast red crosshair border for center
                         pixels[offset] = 0;

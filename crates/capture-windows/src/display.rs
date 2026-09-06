@@ -30,7 +30,11 @@ pub fn enumerate_displays() -> Result<Vec<DisplayInfo>, CaptureError> {
 
             let is_primary = (mi.monitorInfo.dwFlags & 1) != 0;
 
-            let name_len = mi.szDevice.iter().position(|&c| c == 0).unwrap_or(mi.szDevice.len());
+            let name_len = mi
+                .szDevice
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(mi.szDevice.len());
             let name = String::from_utf16_lossy(&mi.szDevice[..name_len]);
 
             let mut dpi_x = 96u32;
@@ -61,7 +65,9 @@ pub fn enumerate_displays() -> Result<Vec<DisplayInfo>, CaptureError> {
     }
 
     if displays.is_empty() {
-        return Err(CaptureError::PlatformError("No active displays found".to_string()));
+        return Err(CaptureError::PlatformError(
+            "No active displays found".to_string(),
+        ));
     }
 
     Ok(displays)
@@ -85,8 +91,16 @@ pub fn get_virtual_desktop_bounds(displays: &[DisplayInfo]) -> DesktopPxRect {
 
     let min_x = displays.iter().map(|d| d.bounds.x).min().unwrap_or(0);
     let min_y = displays.iter().map(|d| d.bounds.y).min().unwrap_or(0);
-    let max_x = displays.iter().map(|d| d.bounds.right()).max().unwrap_or(1920);
-    let max_y = displays.iter().map(|d| d.bounds.bottom()).max().unwrap_or(1080);
+    let max_x = displays
+        .iter()
+        .map(|d| d.bounds.right())
+        .max()
+        .unwrap_or(1920);
+    let max_y = displays
+        .iter()
+        .map(|d| d.bounds.bottom())
+        .max()
+        .unwrap_or(1080);
 
     DesktopPxRect::new(
         min_x,

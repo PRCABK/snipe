@@ -7,6 +7,7 @@ fn main() {
         res.set("ProductName", "Snipe");
         res.set("FileDescription", "Snipe High Performance Screenshot Tool");
         res.set("LegalCopyright", "Copyright (C) 2026 Snipe Contributors");
-        let _ = res.compile();
+        res.compile()
+            .expect("failed to compile Windows application resources");
     }
 }

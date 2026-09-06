@@ -29,19 +29,59 @@ pub fn composite_annotations(base_frame: &Frame, items: &[AnnotationItem]) -> Fr
         }
         match &item.kind {
             AnnotationKind::Rect(r) => {
-                draw_rect(&mut result, r.x, r.y, r.width, r.height, r.stroke_color, r.stroke_width, r.fill_color);
+                draw_rect(
+                    &mut result,
+                    r.x,
+                    r.y,
+                    r.width,
+                    r.height,
+                    r.stroke_color,
+                    r.stroke_width,
+                    r.fill_color,
+                );
             }
             AnnotationKind::Ellipse(e) => {
-                draw_ellipse(&mut result, e.cx, e.cy, e.rx, e.ry, e.stroke_color, e.stroke_width, e.fill_color);
+                draw_ellipse(
+                    &mut result,
+                    e.cx,
+                    e.cy,
+                    e.rx,
+                    e.ry,
+                    e.stroke_color,
+                    e.stroke_width,
+                    e.fill_color,
+                );
             }
             AnnotationKind::Line(l) => {
-                draw_line(&mut result, l.x1, l.y1, l.x2, l.y2, l.stroke_color, l.stroke_width);
+                draw_line(
+                    &mut result,
+                    l.x1,
+                    l.y1,
+                    l.x2,
+                    l.y2,
+                    l.stroke_color,
+                    l.stroke_width,
+                );
             }
             AnnotationKind::Arrow(a) => {
-                draw_arrow(&mut result, a.x1, a.y1, a.x2, a.y2, a.stroke_color, a.stroke_width);
+                draw_arrow(
+                    &mut result,
+                    a.x1,
+                    a.y1,
+                    a.x2,
+                    a.y2,
+                    a.stroke_color,
+                    a.stroke_width,
+                );
             }
             AnnotationKind::Freehand(p) => {
-                draw_path(&mut result, &p.points, p.stroke_color, p.stroke_width, p.is_highlighter);
+                draw_path(
+                    &mut result,
+                    &p.points,
+                    p.stroke_color,
+                    p.stroke_width,
+                    p.is_highlighter,
+                );
             }
             AnnotationKind::Step(s) => {
                 draw_step_badge(&mut result, s.cx, s.cy, s.radius, s.bg_color, s.number);
@@ -69,8 +109,16 @@ fn set_pixel_blend(frame: &mut Frame, x: i32, y: i32, color: ColorRgba) {
     let alpha = color.a as f32 / 255.0;
     let inv_alpha = 1.0 - alpha;
 
-    let b_idx = if frame.format == domain::PixelFormat::Bgra8 { 0 } else { 2 };
-    let r_idx = if frame.format == domain::PixelFormat::Bgra8 { 2 } else { 0 };
+    let b_idx = if frame.format == domain::PixelFormat::Bgra8 {
+        0
+    } else {
+        2
+    };
+    let r_idx = if frame.format == domain::PixelFormat::Bgra8 {
+        2
+    } else {
+        0
+    };
 
     let orig_r = frame.pixels[offset + r_idx] as f32;
     let orig_g = frame.pixels[offset + 1] as f32;
@@ -213,7 +261,13 @@ fn draw_ellipse(
     }
 }
 
-fn draw_path(frame: &mut Frame, points: &[(f32, f32)], color: ColorRgba, width: f32, is_highlighter: bool) {
+fn draw_path(
+    frame: &mut Frame,
+    points: &[(f32, f32)],
+    color: ColorRgba,
+    width: f32,
+    is_highlighter: bool,
+) {
     if points.len() < 2 {
         return;
     }
@@ -227,15 +281,39 @@ fn draw_path(frame: &mut Frame, points: &[(f32, f32)], color: ColorRgba, width: 
     let draw_width = if is_highlighter { width * 2.5 } else { width };
 
     for w in points.windows(2) {
-        draw_line(frame, w[0].0, w[0].1, w[1].0, w[1].1, draw_color, draw_width);
+        draw_line(
+            frame, w[0].0, w[0].1, w[1].0, w[1].1, draw_color, draw_width,
+        );
     }
 }
 
-fn draw_step_badge(frame: &mut Frame, cx: f32, cy: f32, radius: f32, bg_color: ColorRgba, number: u32) {
-    draw_ellipse(frame, cx, cy, radius, radius, ColorRgba::rgb(255, 255, 255), 2.0, Some(bg_color));
+fn draw_step_badge(
+    frame: &mut Frame,
+    cx: f32,
+    cy: f32,
+    radius: f32,
+    bg_color: ColorRgba,
+    number: u32,
+) {
+    draw_ellipse(
+        frame,
+        cx,
+        cy,
+        radius,
+        radius,
+        ColorRgba::rgb(255, 255, 255),
+        2.0,
+        Some(bg_color),
+    );
     // Simple pixel number dot pattern or text
     let num_str = number.to_string();
-    draw_simple_text(frame, cx - 4.0, cy - 6.0, &num_str, ColorRgba::rgb(255, 255, 255));
+    draw_simple_text(
+        frame,
+        cx - 4.0,
+        cy - 6.0,
+        &num_str,
+        ColorRgba::rgb(255, 255, 255),
+    );
 }
 
 fn draw_simple_text(frame: &mut Frame, x: f32, y: f32, text: &str, color: ColorRgba) {

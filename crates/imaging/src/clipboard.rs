@@ -21,13 +21,19 @@ pub fn copy_frame_to_clipboard(frame: &Frame) -> Result<(), ClipboardError> {
     };
 
     clipboard.set_image(image_data)?;
-    info!("Successfully copied frame ({}x{}) to clipboard", frame.width, frame.height);
+    info!(
+        "Successfully copied frame ({}x{}) to clipboard",
+        frame.width, frame.height
+    );
     Ok(())
 }
 
 pub fn copy_text_to_clipboard(text: &str) -> Result<(), ClipboardError> {
     let mut clipboard = Clipboard::new()?;
     clipboard.set_text(text)?;
-    info!("Successfully copied text (length: {}) to clipboard", text.len());
+    info!(
+        "Successfully copied text (length: {}) to clipboard",
+        text.len()
+    );
     Ok(())
 }

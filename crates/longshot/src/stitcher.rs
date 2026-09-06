@@ -1,4 +1,4 @@
-use domain::{Frame, PixelFormat};
+use domain::Frame;
 use thiserror::Error;
 use tracing::{debug, info};
 
@@ -7,7 +7,9 @@ pub enum LongshotError {
     #[error("No frames collected to stitch")]
     NoFrames,
 
-    #[error("Frames dimension mismatch: expected {expected_w}x{expected_h}, got {actual_w}x{actual_h}")]
+    #[error(
+        "Frames dimension mismatch: expected {expected_w}x{expected_h}, got {actual_w}x{actual_h}"
+    )]
     DimensionMismatch {
         expected_w: u32,
         expected_h: u32,
@@ -17,6 +19,15 @@ pub enum LongshotError {
 
     #[error("Stitching exceeded maximum height limit of {0} pixels")]
     MaxHeightExceeded(u32),
+
+    #[error("Frame pixel format mismatch")]
+    PixelFormatMismatch,
+
+    #[error("Could not reliably align frame {0} with the previous frame")]
+    AlignmentFailed(usize),
+
+    #[error("Invalid frame buffer layout")]
+    InvalidFrameLayout,
 
     #[error("Frame buffer allocation failed: {0}")]
     AllocationError(String),
@@ -103,7 +114,10 @@ pub fn estimate_vertical_scroll(
 
     // A low difference threshold confirms reliable overlap
     if min_diff < 40 && best_shift > 0 {
-        debug!("Detected vertical scroll displacement: {} px (diff: {})", best_shift, min_diff);
+        debug!(
+            "Detected vertical scroll displacement: {} px (diff: {})",
+            best_shift, min_diff
+        );
         Some(best_shift)
     } else {
         None
@@ -116,61 +130,127 @@ pub fn stitch_frames(frames: &[Frame], options: &StitchOptions) -> Result<Frame,
         return Err(LongshotError::NoFrames);
     }
 
-    if frames.len() == 1 {
-        return Ok(frames[0].clone());
-    }
-
-    let width = frames[0].width;
+    let first = &frames[0];
+    let width = first.width;
+    let frame_height = first.height;
+    let format = first.format;
     let bytes_per_pixel = 4u32;
-    let stride = width * bytes_per_pixel;
+    let stride = width
+        .checked_mul(bytes_per_pixel)
+        .ok_or(LongshotError::InvalidFrameLayout)?;
 
-    // Start with the full first frame
-    let mut total_height = frames[0].height;
-    let mut stitched_pixels = frames[0].pixels.clone();
+    let validate_frame = |frame: &Frame| -> Result<(), LongshotError> {
+        if frame.width != width || frame.height != frame_height {
+            return Err(LongshotError::DimensionMismatch {
+                expected_w: width,
+                expected_h: frame_height,
+                actual_w: frame.width,
+                actual_h: frame.height,
+            });
+        }
+        if frame.format != format {
+            return Err(LongshotError::PixelFormatMismatch);
+        }
+        let minimum_stride = frame
+            .width
+            .checked_mul(bytes_per_pixel)
+            .ok_or(LongshotError::InvalidFrameLayout)?;
+        let required_len = (frame.stride as usize)
+            .checked_mul(frame.height as usize)
+            .ok_or(LongshotError::InvalidFrameLayout)?;
+        if frame.stride < minimum_stride || frame.pixels.len() < required_len {
+            return Err(LongshotError::InvalidFrameLayout);
+        }
+        Ok(())
+    };
+
+    validate_frame(first)?;
+
+    let mut total_height = frame_height;
+    let initial_capacity = (stride as usize)
+        .checked_mul(frame_height as usize)
+        .ok_or(LongshotError::InvalidFrameLayout)?;
+    let mut stitched_pixels = Vec::new();
+    stitched_pixels
+        .try_reserve_exact(initial_capacity)
+        .map_err(|err| LongshotError::AllocationError(err.to_string()))?;
+    append_rows(&mut stitched_pixels, first, 0, frame_height, stride)?;
 
     for i in 1..frames.len() {
         let prev = &frames[i - 1];
         let curr = &frames[i];
 
-        if curr.width != width {
-            return Err(LongshotError::DimensionMismatch {
-                expected_w: width,
-                expected_h: prev.height,
-                actual_w: curr.width,
-                actual_h: curr.height,
-            });
-        }
+        validate_frame(curr)?;
 
-        let shift = estimate_vertical_scroll(prev, curr, options).unwrap_or(curr.height / 3);
+        let shift = estimate_vertical_scroll(prev, curr, options)
+            .ok_or(LongshotError::AlignmentFailed(i))?;
 
-        if total_height + shift > options.max_height {
+        let next_height = total_height
+            .checked_add(shift)
+            .ok_or(LongshotError::MaxHeightExceeded(options.max_height))?;
+        if next_height > options.max_height {
             return Err(LongshotError::MaxHeightExceeded(options.max_height));
         }
 
-        // Append the new content from curr: rows from (curr.height - shift) to curr.height
         let start_row = curr.height.saturating_sub(shift);
-        let num_rows = curr.height - start_row;
-
-        let start_byte = (start_row * curr.stride) as usize;
-        let end_byte = (curr.height * curr.stride) as usize;
-
-        if end_byte <= curr.pixels.len() {
-            stitched_pixels.extend_from_slice(&curr.pixels[start_byte..end_byte]);
-            total_height += num_rows;
-        }
+        append_rows(&mut stitched_pixels, curr, start_row, shift, stride)?;
+        total_height = next_height;
     }
 
-    info!("Stitched {} frames into long image ({}x{})", frames.len(), width, total_height);
+    info!(
+        "Stitched {} frames into long image ({}x{})",
+        frames.len(),
+        width,
+        total_height
+    );
 
     Ok(Frame {
         width,
         height: total_height,
         stride,
-        format: PixelFormat::Rgba8,
+        format,
         pixels: stitched_pixels,
         monitor_id: frames[0].monitor_id.clone(),
         timestamp_ms: 0,
     })
+}
+
+fn append_rows(
+    destination: &mut Vec<u8>,
+    frame: &Frame,
+    start_row: u32,
+    row_count: u32,
+    output_stride: u32,
+) -> Result<(), LongshotError> {
+    let end_row = start_row
+        .checked_add(row_count)
+        .ok_or(LongshotError::InvalidFrameLayout)?;
+    if end_row > frame.height || output_stride > frame.stride {
+        return Err(LongshotError::InvalidFrameLayout);
+    }
+
+    let additional = (output_stride as usize)
+        .checked_mul(row_count as usize)
+        .ok_or(LongshotError::InvalidFrameLayout)?;
+    destination
+        .try_reserve(additional)
+        .map_err(|err| LongshotError::AllocationError(err.to_string()))?;
+
+    for row in start_row..end_row {
+        let row_start = (row as usize)
+            .checked_mul(frame.stride as usize)
+            .ok_or(LongshotError::InvalidFrameLayout)?;
+        let row_end = row_start
+            .checked_add(output_stride as usize)
+            .ok_or(LongshotError::InvalidFrameLayout)?;
+        let source = frame
+            .pixels
+            .get(row_start..row_end)
+            .ok_or(LongshotError::InvalidFrameLayout)?;
+        destination.extend_from_slice(source);
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -184,5 +264,19 @@ mod tests {
         let stitched = stitch_frames(&[frame], &StitchOptions::default()).unwrap();
         assert_eq!(stitched.width, 10);
         assert_eq!(stitched.height, 10);
+    }
+
+    #[test]
+    fn preserves_bgra_format_and_removes_stride_padding() {
+        let mut pixels = Vec::new();
+        pixels.extend_from_slice(&[1, 2, 3, 255, 9, 9, 9, 9]);
+        pixels.extend_from_slice(&[4, 5, 6, 255, 8, 8, 8, 8]);
+        let frame = Frame::new(1, 2, 8, PixelFormat::Bgra8, pixels).unwrap();
+
+        let stitched = stitch_frames(&[frame], &StitchOptions::default()).unwrap();
+
+        assert_eq!(stitched.format, PixelFormat::Bgra8);
+        assert_eq!(stitched.stride, 4);
+        assert_eq!(stitched.pixels, vec![1, 2, 3, 255, 4, 5, 6, 255]);
     }
 }

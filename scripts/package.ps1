@@ -1,13 +1,34 @@
 # PowerShell packaging script for Snipe
 param(
-    [string]$Version = "0.1.0"
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
-Write-Host "==> Packaging Snipe v$Version..." -ForegroundColor Cyan
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
+
+$cargoToml = Get-Content -LiteralPath (Join-Path $RepoRoot "Cargo.toml") -Raw
+$workspaceVersionMatch = [regex]::Match(
+    $cargoToml,
+    '(?ms)^\[workspace\.package\].*?^version\s*=\s*"([^"]+)"'
+)
+if (!$workspaceVersionMatch.Success) {
+    throw "Could not read workspace.package.version from Cargo.toml"
+}
+$workspaceVersion = $workspaceVersionMatch.Groups[1].Value
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = $workspaceVersion
+}
+$Version = $Version.TrimStart('v')
+if ($Version -ne $workspaceVersion) {
+    throw "Release version '$Version' does not match Cargo workspace version '$workspaceVersion'"
+}
+if (!(Test-Path -LiteralPath (Join-Path $RepoRoot "Cargo.lock"))) {
+    throw "Cargo.lock is required for a reproducible release build; generate and commit it before tagging"
+}
+
+Write-Host "==> Packaging Snipe v$Version..." -ForegroundColor Cyan
 
 # Ensure dist output directory exists
 $DistDir = Join-Path $RepoRoot "dist"
@@ -15,26 +36,17 @@ if (!(Test-Path $DistDir)) {
     New-Item -ItemType Directory -Path $DistDir | Out-Null
 }
 
-# 1. Check release executable
+Write-Host "==> Building locked release workspace..." -ForegroundColor Cyan
+cargo build --workspace --release --locked
+if ($LASTEXITCODE -ne 0) {
+    throw "cargo build failed with exit code $LASTEXITCODE"
+}
+
 $ExePath = Join-Path $RepoRoot "target\release\snipe.exe"
-if (!(Test-Path $ExePath)) {
-    Write-Host "==> Release binary not found, building..." -ForegroundColor Yellow
-    cargo build --release --workspace
+if (!(Test-Path -LiteralPath $ExePath)) {
+    throw "Release binary was not produced at $ExePath"
 }
 
-if (!(Test-Path $ExePath)) {
-    Write-Error "Failed to locate $ExePath after build!"
-    exit 1
-}
-
-Write-Host "==> Found release binary: $ExePath" -ForegroundColor Green
-
-# 2. Package portable zip
-$ZipPath = Join-Path $DistDir "Snipe-v$Version-windows-x64-portable.zip"
-Write-Host "==> Creating portable archive: $ZipPath"
-Compress-Archive -Path $ExePath -DestinationPath $ZipPath -Force
-
-# 3. Compile Inno Setup installer
 $IsccCandidates = @(
     "ISCC.exe",
     "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
@@ -54,12 +66,19 @@ foreach ($c in $IsccCandidates) {
     }
 }
 
-if ($IsccPath) {
-    Write-Host "==> Compiling installer with $IsccPath..." -ForegroundColor Cyan
-    & $IsccPath "/DMyAppVersion=$Version" (Join-Path $RepoRoot "installer\snipe.iss")
-    Write-Host "==> Inno Setup installer generated in $DistDir" -ForegroundColor Green
-} else {
-    Write-Host "[WARNING] ISCC.exe (Inno Setup) not found. Portable zip was generated, but setup.exe was skipped." -ForegroundColor Yellow
+if (!$IsccPath) {
+    throw "ISCC.exe (Inno Setup 6) was not found"
 }
 
-Write-Host "==> Packaging complete!" -ForegroundColor Green
+Write-Host "==> Compiling installer with $IsccPath..." -ForegroundColor Cyan
+& $IsccPath "/DMyAppVersion=$Version" (Join-Path $RepoRoot "installer\snipe.iss")
+if ($LASTEXITCODE -ne 0) {
+    throw "Inno Setup failed with exit code $LASTEXITCODE"
+}
+
+$SetupPath = Join-Path $DistDir "Snipe-Setup-$Version-x64.exe"
+if (!(Test-Path -LiteralPath $SetupPath)) {
+    throw "Expected installer was not produced at $SetupPath"
+}
+
+Write-Host "==> Packaging complete: $SetupPath" -ForegroundColor Green

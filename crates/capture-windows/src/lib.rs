@@ -4,8 +4,8 @@ pub mod window;
 
 use async_trait::async_trait;
 use capture_core::{CaptureError, CaptureService, CaptureTarget, DisplayInfo, WindowInfo};
-use domain::Frame;
 use display::{enumerate_displays, get_virtual_desktop_bounds};
+use domain::Frame;
 use gdi::capture_desktop_rect;
 use window::enumerate_windows;
 

@@ -29,7 +29,10 @@ impl LongshotSession {
     }
 
     pub fn add_frame(&mut self, frame: Frame) -> bool {
-        if matches!(self.state, SessionState::Completed | SessionState::Failed(_)) {
+        if matches!(
+            self.state,
+            SessionState::Completed | SessionState::Failed(_)
+        ) {
             return false;
         }
 

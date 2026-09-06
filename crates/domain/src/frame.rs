@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use crate::color::ColorRgba;
 use crate::coordinates::ImagePxRect;
 use crate::error::DomainError;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PixelFormat {
@@ -28,7 +28,15 @@ impl Frame {
         format: PixelFormat,
         pixels: Vec<u8>,
     ) -> Result<Self, DomainError> {
-        let expected_len = (stride * height) as usize;
+        let minimum_stride = width
+            .checked_mul(4)
+            .ok_or(DomainError::InvalidDimensions(width, height))?;
+        if width == 0 || height == 0 || stride < minimum_stride {
+            return Err(DomainError::InvalidDimensions(width, height));
+        }
+        let expected_len = (stride as usize)
+            .checked_mul(height as usize)
+            .ok_or(DomainError::InvalidDimensions(width, height))?;
         if pixels.len() < expected_len {
             return Err(DomainError::BufferMismatch {
                 expected: expected_len,
@@ -79,7 +87,10 @@ impl Frame {
     pub fn crop(&self, rect: ImagePxRect) -> Result<Frame, DomainError> {
         let clamped = rect.clamp_to(self.width, self.height);
         if clamped.width == 0 || clamped.height == 0 {
-            return Err(DomainError::InvalidDimensions(clamped.width, clamped.height));
+            return Err(DomainError::InvalidDimensions(
+                clamped.width,
+                clamped.height,
+            ));
         }
 
         let bytes_per_pixel = 4u32;
@@ -104,24 +115,35 @@ impl Frame {
         })
     }
 
-    /// Convert in-place or return copy in RGBA8 format
+    /// Return a tightly packed RGBA8 copy, removing any per-row padding.
     pub fn to_rgba8(&self) -> Frame {
-        if self.format == PixelFormat::Rgba8 {
-            return self.clone();
-        }
+        let output_stride = self.width * 4;
+        let mut rgba = Vec::with_capacity((output_stride * self.height) as usize);
 
-        let mut rgba = self.pixels.clone();
-        for chunk in rgba.chunks_exact_mut(4) {
-            let b = chunk[0];
-            let r = chunk[2];
-            chunk[0] = r;
-            chunk[2] = b;
+        for y in 0..self.height {
+            let row_start = (y * self.stride) as usize;
+            for x in 0..self.width {
+                let offset = row_start + (x * 4) as usize;
+                match self.format {
+                    PixelFormat::Bgra8 => {
+                        rgba.extend_from_slice(&[
+                            self.pixels[offset + 2],
+                            self.pixels[offset + 1],
+                            self.pixels[offset],
+                            self.pixels[offset + 3],
+                        ]);
+                    }
+                    PixelFormat::Rgba8 => {
+                        rgba.extend_from_slice(&self.pixels[offset..offset + 4]);
+                    }
+                }
+            }
         }
 
         Frame {
             width: self.width,
             height: self.height,
-            stride: self.stride,
+            stride: output_stride,
             format: PixelFormat::Rgba8,
             pixels: rgba,
             monitor_id: self.monitor_id.clone(),
@@ -143,10 +165,10 @@ mod tests {
 
         // Fill (2, 2) with BGRA red
         let offset = (2 * 40 + 2 * 4) as usize;
-        pixels[offset] = 0;      // B
-        pixels[offset + 1] = 0;  // G
-        pixels[offset + 2] = 255;// R
-        pixels[offset + 3] = 255;// A
+        pixels[offset] = 0; // B
+        pixels[offset + 1] = 0; // G
+        pixels[offset + 2] = 255; // R
+        pixels[offset + 3] = 255; // A
 
         let frame = Frame::new(width, height, stride, PixelFormat::Bgra8, pixels).unwrap();
         let pixel = frame.pixel_at(2, 2).unwrap();
@@ -158,5 +180,16 @@ mod tests {
         assert_eq!(cropped.height, 4);
         let cropped_pixel = cropped.pixel_at(1, 1).unwrap();
         assert_eq!(cropped_pixel, ColorRgba::new(255, 0, 0, 255));
+    }
+
+    #[test]
+    fn to_rgba8_removes_row_padding() {
+        let pixels = vec![1, 2, 3, 255, 9, 9, 9, 9, 4, 5, 6, 255, 8, 8, 8, 8];
+        let frame = Frame::new(1, 2, 8, PixelFormat::Bgra8, pixels).unwrap();
+
+        let rgba = frame.to_rgba8();
+
+        assert_eq!(rgba.stride, 4);
+        assert_eq!(rgba.pixels, vec![3, 2, 1, 255, 6, 5, 4, 255]);
     }
 }

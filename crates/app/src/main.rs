@@ -8,6 +8,7 @@ mod tray;
 
 use config::AppConfig;
 use domain::HotkeyAction;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::mpsc::unbounded_channel;
@@ -66,73 +67,79 @@ fn main() -> anyhow::Result<()> {
 
     #[cfg(windows)]
     {
-        hotkey::register_global_hotkey(msg_window.hwnd, hotkey::HOTKEY_ID_SCREENSHOT, &cfg.hotkeys.screenshot);
-        hotkey::register_global_hotkey(msg_window.hwnd, hotkey::HOTKEY_ID_COLOR, &cfg.hotkeys.color_picker);
-        hotkey::register_global_hotkey(msg_window.hwnd, hotkey::HOTKEY_ID_LONGSHOT, &cfg.hotkeys.longshot);
+        hotkey::register_global_hotkey(
+            msg_window.hwnd,
+            hotkey::HOTKEY_ID_SCREENSHOT,
+            &cfg.hotkeys.screenshot,
+        );
+        hotkey::register_global_hotkey(
+            msg_window.hwnd,
+            hotkey::HOTKEY_ID_COLOR,
+            &cfg.hotkeys.color_picker,
+        );
+        hotkey::register_global_hotkey(
+            msg_window.hwnd,
+            hotkey::HOTKEY_ID_LONGSHOT,
+            &cfg.hotkeys.longshot,
+        );
     }
 
-    // 8. Initialize App Controller on UI thread
-    let controller = Arc::new(controller::AppController::new());
+    // 8. Keep all Slint objects on the UI thread. AppController is deliberately
+    // not Send because it owns Slint windows and Rc-backed UI state.
+    let controller = Rc::new(controller::AppController::new());
 
-    // 9. Dispatch background IPC and Win32 system events to Slint UI thread
-    let ctrl_for_sys = controller.clone();
-    rt.spawn(async move {
-        while let Some(msg) = sys_rx.recv().await {
-            let ctrl = ctrl_for_sys.clone();
-            match msg {
-                tray::SystemMessage::Hotkey(action) => {
-                    let _ = slint::invoke_from_event_loop(move || match action {
-                        HotkeyAction::Screenshot => ctrl.trigger_screenshot(),
-                        HotkeyAction::ColorPicker => ctrl.trigger_color_picker(),
-                        HotkeyAction::Settings => ctrl.open_settings(),
-                        HotkeyAction::Longshot | HotkeyAction::Pin => ctrl.trigger_screenshot(),
-                    });
-                }
-                tray::SystemMessage::TrayAction(menu_id) => {
-                    let _ = slint::invoke_from_event_loop(move || match menu_id {
-                        tray::TRAY_MENU_SCREENSHOT => ctrl.trigger_screenshot(),
-                        tray::TRAY_MENU_COLOR => ctrl.trigger_color_picker(),
-                        tray::TRAY_MENU_LONGSHOT => ctrl.trigger_screenshot(),
-                        tray::TRAY_MENU_SETTINGS => ctrl.open_settings(),
+    // 9. Drain native/IPC events from the Slint thread. Moving AppController
+    // into tokio::spawn would require its Slint windows to be Send.
+    #[cfg(windows)]
+    let notification_hwnd = msg_window.hwnd;
+    let ctrl_for_events = controller.clone();
+    let event_timer = slint::Timer::default();
+    event_timer.start(
+        slint::TimerMode::Repeated,
+        std::time::Duration::from_millis(10),
+        move || {
+            while let Ok(msg) = sys_rx.try_recv() {
+                match msg {
+                    tray::SystemMessage::Hotkey(action) => match action {
+                        HotkeyAction::Screenshot => ctrl_for_events.trigger_screenshot(),
+                        HotkeyAction::ColorPicker => ctrl_for_events.trigger_color_picker(),
+                        HotkeyAction::Settings => ctrl_for_events.open_settings(),
+                        HotkeyAction::Longshot | HotkeyAction::Pin => {
+                            ctrl_for_events.trigger_screenshot()
+                        }
+                    },
+                    tray::SystemMessage::TrayAction(menu_id) => match menu_id {
+                        tray::TRAY_MENU_SCREENSHOT => ctrl_for_events.trigger_screenshot(),
+                        tray::TRAY_MENU_COLOR => ctrl_for_events.trigger_color_picker(),
+                        tray::TRAY_MENU_LONGSHOT => ctrl_for_events.trigger_screenshot(),
+                        tray::TRAY_MENU_SETTINGS => ctrl_for_events.open_settings(),
                         tray::TRAY_MENU_EXIT => {
                             let _ = slint::quit_event_loop();
                         }
                         _ => {}
-                    });
-                }
-                tray::SystemMessage::ShutdownRequested => {
-                    let _ = slint::invoke_from_event_loop(|| {
+                    },
+                    tray::SystemMessage::ShutdownRequested => {
                         let _ = slint::quit_event_loop();
-                    });
-                }
-                tray::SystemMessage::ExplorerRestarted => {
-                    #[cfg(windows)]
-                    tray::add_tray_icon(msg_window.hwnd);
+                    }
+                    tray::SystemMessage::ExplorerRestarted => {
+                        #[cfg(windows)]
+                        tray::add_tray_icon(notification_hwnd);
+                    }
                 }
             }
-        }
-    });
 
-    let ctrl_for_ipc = controller.clone();
-    rt.spawn(async move {
-        while let Some(cmd) = ipc_rx.recv().await {
-            let ctrl = ctrl_for_ipc.clone();
-            match cmd.as_str() {
-                "OPEN_SETTINGS" => {
-                    let _ = slint::invoke_from_event_loop(move || {
-                        ctrl.open_settings();
-                    });
-                }
-                "SHUTDOWN_FOR_UPDATE" => {
-                    info!("Received shutdown for update IPC. Quitting event loop.");
-                    let _ = slint::invoke_from_event_loop(|| {
+            while let Ok(cmd) = ipc_rx.try_recv() {
+                match cmd.as_str() {
+                    "OPEN_SETTINGS" => ctrl_for_events.open_settings(),
+                    "SHUTDOWN_FOR_UPDATE" => {
+                        info!("Received shutdown for update IPC. Quitting event loop.");
                         let _ = slint::quit_event_loop();
-                    });
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
-        }
-    });
+        },
+    );
 
     // 10. Run Slint event loop
     info!("Running Slint event loop. System ready.");
@@ -140,6 +147,8 @@ fn main() -> anyhow::Result<()> {
 
     // 11. Cleanup on graceful exit
     info!("Cleaning up resources before exit...");
+    event_timer.stop();
+    controller.shutdown();
     shutdown_flag.store(true, Ordering::Relaxed);
 
     #[cfg(windows)]

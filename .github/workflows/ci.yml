@@ -21,12 +21,22 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Check Workspace
-        run: cargo check --workspace --all-targets
+      - name: Verify committed dependency lockfile
+        run: cargo metadata --locked --format-version 1 --no-deps > $null
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
       - name: Run Tests
-        run: cargo test --workspace --verbose
+        run: cargo test --workspace --all-features --locked
+
+      - name: Build release workspace
+        run: cargo build --workspace --release --locked

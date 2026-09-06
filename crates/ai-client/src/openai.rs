@@ -123,13 +123,16 @@ impl OpenAiVisionClient {
             });
         }
 
-        let body: Value = response.json().await.map_err(|e| {
-            AiError::InvalidResponse(format!("Failed to parse JSON body: {}", e))
-        })?;
+        let body: Value = response
+            .json()
+            .await
+            .map_err(|e| AiError::InvalidResponse(format!("Failed to parse JSON body: {}", e)))?;
 
         let content = body["choices"][0]["message"]["content"]
             .as_str()
-            .ok_or_else(|| AiError::InvalidResponse("Missing choices[0].message.content".to_string()))?;
+            .ok_or_else(|| {
+                AiError::InvalidResponse("Missing choices[0].message.content".to_string())
+            })?;
 
         info!("Successfully received AI response for model {}", self.model);
         Ok(content.trim().to_string())

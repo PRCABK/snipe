@@ -73,17 +73,15 @@ pub fn register_global_hotkey(
 
     if let Some(parsed) = parse_hotkey_str(hotkey_str) {
         unsafe {
-            let res = RegisterHotKey(
-                hwnd,
-                id,
-                HOT_KEY_MODIFIERS(parsed.modifiers),
-                parsed.vk,
-            );
+            let res = RegisterHotKey(hwnd, id, HOT_KEY_MODIFIERS(parsed.modifiers), parsed.vk);
             if res.is_ok() {
                 info!("Registered hotkey ID {} for '{}'", id, hotkey_str);
                 return true;
             } else {
-                warn!("Failed to register hotkey ID {} for '{}': shortcut conflict", id, hotkey_str);
+                warn!(
+                    "Failed to register hotkey ID {} for '{}': shortcut conflict",
+                    id, hotkey_str
+                );
                 return false;
             }
         }

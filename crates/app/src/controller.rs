@@ -78,7 +78,9 @@ impl AppController {
                     if let Some(color) = frame.pixel_at(ix as u32, iy as u32) {
                         overlay_clone.set_color_hex(color.to_hex_rgb().into());
                         overlay_clone.set_color_rgb(color.to_rgb_str().into());
-                        overlay_clone.set_preview_color(slint::Color::from_argb_u8(color.a, color.r, color.g, color.b));
+                        overlay_clone.set_preview_color(slint::Color::from_argb_u8(
+                            color.a, color.r, color.g, color.b,
+                        ));
                     }
                 }
             }
@@ -210,6 +212,17 @@ impl AppController {
         .unwrap();
     }
 
+    pub fn shutdown(&self) {
+        self.pin_manager.close_all();
+        let _ = self.overlay_window.hide();
+        if let Some(window) = self.settings_window.borrow().as_ref() {
+            let _ = window.hide();
+        }
+        if let Some(window) = self.ai_window.borrow().as_ref() {
+            let _ = window.hide();
+        }
+    }
+
     pub fn trigger_color_picker(&self) {
         let capture_service = self.capture_service.clone();
         let overlay = self.overlay_window.clone();
@@ -239,7 +252,8 @@ impl AppController {
             win.set_ai_base_url(cfg.ai.base_url.into());
             win.set_ai_model(cfg.ai.model.into());
 
-            let current_key = CredentialStorage::read_secret(DEFAULT_TARGET_NAME).unwrap_or_default();
+            let current_key =
+                CredentialStorage::read_secret(DEFAULT_TARGET_NAME).unwrap_or_default();
             win.set_ai_key_masked(CredentialStorage::mask_key(&current_key).into());
 
             // Save settings callback
@@ -344,7 +358,11 @@ impl AppController {
         let cfg = AppConfig::load();
         let api_key = CredentialStorage::read_secret(DEFAULT_TARGET_NAME).unwrap_or_default();
 
-        win.set_title_text(if is_translate { "截图翻译结果".into() } else { "OCR 识别结果".into() });
+        win.set_title_text(if is_translate {
+            "截图翻译结果".into()
+        } else {
+            "OCR 识别结果".into()
+        });
         win.set_model_name(cfg.ai.model.clone().into());
         win.set_is_loading(true);
         win.set_status_text("正在调用多模态模型识别...".into());
@@ -375,7 +393,10 @@ impl AppController {
             let cancel = CancellationToken::new();
 
             if is_translate {
-                match client.translate_image(&png_bytes, &target_lang, cancel).await {
+                match client
+                    .translate_image(&png_bytes, &target_lang, cancel)
+                    .await
+                {
                     Ok(res) => {
                         if let Some(w) = win_weak.upgrade() {
                             w.set_is_loading(false);

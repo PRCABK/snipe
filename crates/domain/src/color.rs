@@ -30,7 +30,13 @@ impl ColorRgba {
     }
 
     pub fn to_rgba_str(&self) -> String {
-        format!("rgba({}, {}, {}, {:.2})", self.r, self.g, self.b, self.a as f32 / 255.0)
+        format!(
+            "rgba({}, {}, {}, {:.2})",
+            self.r,
+            self.g,
+            self.b,
+            self.a as f32 / 255.0
+        )
     }
 
     pub fn to_hsl(&self) -> ColorHsl {
@@ -64,7 +70,11 @@ impl ColorRgba {
             (h, s)
         };
 
-        ColorHsl { h, s: s * 100.0, l: l * 100.0 }
+        ColorHsl {
+            h,
+            s: s * 100.0,
+            l: l * 100.0,
+        }
     }
 
     pub fn to_hsv(&self) -> ColorHsv {
@@ -89,7 +99,11 @@ impl ColorRgba {
             ((r - g) / delta + 4.0) * 60.0
         };
 
-        ColorHsv { h, s: s * 100.0, v: v * 100.0 }
+        ColorHsv {
+            h,
+            s: s * 100.0,
+            v: v * 100.0,
+        }
     }
 }
 

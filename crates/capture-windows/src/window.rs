@@ -7,8 +7,8 @@ pub fn enumerate_windows() -> Result<Vec<WindowInfo>, CaptureError> {
     use windows::Win32::Foundation::{BOOL, HWND, LPARAM, RECT};
     use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
     use windows::Win32::UI::WindowsAndMessaging::{
-        EnumWindows, GetClassNameW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-        IsIconic, IsWindowVisible,
+        EnumWindows, GetClassNameW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW, IsIconic,
+        IsWindowVisible,
     };
 
     let mut windows_list = Vec::new();

@@ -9,7 +9,7 @@ on:
       version:
         description: "Release version (e.g. 0.1.0)"
         required: false
-        default: "0.1.0"
+        default: "0.1.1-alpha.1"
 
 env:
   CARGO_TERM_COLOR: always
@@ -28,6 +28,23 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - name: Resolve and validate release version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            $version = "${{ inputs.version }}".TrimStart("v")
+          }
+          $manifest = Get-Content -LiteralPath Cargo.toml -Raw
+          $match = [regex]::Match($manifest, '(?ms)^\[workspace\.package\].*?^version\s*=\s*"([^"]+)"')
+          if (!$match.Success -or $match.Groups[1].Value -ne $version) {
+            throw "Release version '$version' does not match Cargo.toml workspace version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Install Inno Setup
         run: |
@@ -37,16 +54,22 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Run Tests
-        run: cargo test --workspace --release
+      - name: Verify committed dependency lockfile
+        run: cargo metadata --locked --format-version 1 --no-deps > $null
 
-      - name: Build Release Binary
-        run: cargo build --workspace --release
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Run Tests
+        run: cargo test --workspace --release --locked
 
       - name: Package with Inno Setup
         shell: pwsh
         run: |
-          ./scripts/package.ps1
+          ./scripts/package.ps1 -Version "${{ steps.version.outputs.version }}"
 
       - name: Generate Checksums
         shell: pwsh
@@ -64,7 +87,7 @@ jobs:
           files: |
             dist/*
           draft: false
-          prerelease: false
+          prerelease: true
           generate_release_notes: true
 
       - name: Upload Artifacts (Dispatch or Tag)

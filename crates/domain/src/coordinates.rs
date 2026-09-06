@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::error::DomainError;
+use serde::{Deserialize, Serialize};
 
 /// Windows virtual desktop coordinate in physical pixels (can be negative on multi-monitor setups).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -25,7 +25,12 @@ pub struct DesktopPxRect {
 
 impl DesktopPxRect {
     pub const fn new(x: i32, y: i32, width: u32, height: u32) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     pub fn right(&self) -> i32 {
@@ -85,7 +90,12 @@ pub struct MonitorPxRect {
 
 impl MonitorPxRect {
     pub const fn new(x: i32, y: i32, width: u32, height: u32) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 }
 
@@ -113,7 +123,12 @@ pub struct ImagePxRect {
 
 impl ImagePxRect {
     pub const fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     pub fn right(&self) -> u32 {
@@ -129,7 +144,12 @@ impl ImagePxRect {
         let y = self.y.min(max_height);
         let width = self.width.min(max_width.saturating_sub(x));
         let height = self.height.min(max_height.saturating_sub(y));
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 }
 
@@ -157,7 +177,12 @@ pub struct LogicalRect {
 
 impl LogicalRect {
     pub const fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 }
 
@@ -185,7 +210,10 @@ pub fn desktop_rect_to_image_rect(
         .clamp_to(frame_width, frame_height);
 
     if clamped.width == 0 || clamped.height == 0 {
-        return Err(DomainError::InvalidDimensions(clamped.width, clamped.height));
+        return Err(DomainError::InvalidDimensions(
+            clamped.width,
+            clamped.height,
+        ));
     }
 
     Ok(clamped)

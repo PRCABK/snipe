@@ -1,4 +1,5 @@
 use thiserror::Error;
+#[cfg(windows)]
 use tracing::{error, info};
 
 #[derive(Debug, Error)]
@@ -6,8 +7,14 @@ pub enum StorageError {
     #[error("Credential not found: {0}")]
     NotFound(String),
 
-    #[error("Windows Credential API error code: {0}")]
-    Win32Error(u32),
+    #[error("Windows Credential API error HRESULT: {0:#010x}")]
+    WindowsError(i32),
+
+    #[error("Credential target name must not be empty or contain NUL")]
+    InvalidTargetName,
+
+    #[error("Credential is too large: {actual} bytes (maximum {maximum})")]
+    SecretTooLarge { actual: usize, maximum: usize },
 
     #[error("Invalid UTF-8 string in stored credential")]
     InvalidUtf8,
@@ -23,52 +30,73 @@ pub struct CredentialStorage;
 impl CredentialStorage {
     /// Mask an API key for UI display (e.g. "sk-...ab12")
     pub fn mask_key(key: &str) -> String {
-        if key.is_empty() {
+        let chars: Vec<char> = key.chars().collect();
+        if chars.is_empty() {
             return "未配置".to_string();
         }
-        if key.len() <= 8 {
+        if chars.len() <= 8 {
             return "********".to_string();
         }
-        let prefix = &key[..3.min(key.len())];
-        let suffix = &key[key.len().saturating_sub(4)..];
-        format!("{}...{}", prefix, suffix)
+
+        let prefix: String = chars.iter().take(3).collect();
+        let suffix: String = chars.iter().skip(chars.len() - 4).collect();
+        format!("{prefix}...{suffix}")
     }
 
     #[cfg(windows)]
     pub fn store_secret(target_name: &str, secret: &str) -> Result<(), StorageError> {
-        use windows::core::PCWSTR;
+        use windows::core::PWSTR;
         use windows::Win32::Security::Credentials::{
-            CredWriteW, CREDENTIALW, CRED_PERSIST_LOCAL_MACHINE, CRED_TYPE_GENERIC,
+            CredWriteW, CREDENTIALW, CRED_FLAGS, CRED_PERSIST_LOCAL_MACHINE, CRED_TYPE_GENERIC,
         };
 
-        let target_wide: Vec<u16> = target_name.encode_utf16().chain(std::iter::once(0)).collect();
-        let user_wide: Vec<u16> = "SnipeUser".encode_utf16().chain(std::iter::once(0)).collect();
+        const MAX_CREDENTIAL_BLOB_SIZE: usize = 5 * 512;
+        if target_name.is_empty() || target_name.contains('\0') {
+            return Err(StorageError::InvalidTargetName);
+        }
+        if secret.len() > MAX_CREDENTIAL_BLOB_SIZE {
+            return Err(StorageError::SecretTooLarge {
+                actual: secret.len(),
+                maximum: MAX_CREDENTIAL_BLOB_SIZE,
+            });
+        }
+
+        let mut target_wide: Vec<u16> = target_name
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        let mut user_wide: Vec<u16> = "SnipeUser"
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
         let secret_bytes = secret.as_bytes();
 
-        let mut cred = CREDENTIALW {
-            Flags: 0,
+        let cred = CREDENTIALW {
+            Flags: CRED_FLAGS(0),
             Type: CRED_TYPE_GENERIC,
-            TargetName: PCWSTR(target_wide.as_ptr()),
-            Comment: PCWSTR::null(),
+            TargetName: PWSTR(target_wide.as_mut_ptr()),
+            Comment: PWSTR::null(),
             LastWritten: windows::Win32::Foundation::FILETIME::default(),
             CredentialBlobSize: secret_bytes.len() as u32,
             CredentialBlob: secret_bytes.as_ptr() as *mut u8,
             Persist: CRED_PERSIST_LOCAL_MACHINE,
             AttributeCount: 0,
             Attributes: std::ptr::null_mut(),
-            TargetAlias: PCWSTR::null(),
-            UserName: PCWSTR(user_wide.as_ptr()),
+            TargetAlias: PWSTR::null(),
+            UserName: PWSTR(user_wide.as_mut_ptr()),
         };
 
         unsafe {
-            if !CredWriteW(&mut cred, 0).as_bool() {
-                let err = windows::Win32::Foundation::GetLastError();
-                error!("Failed to write credential for {}: {:?}", target_name, err.0);
-                return Err(StorageError::Win32Error(err.0));
-            }
+            CredWriteW(&cred, 0).map_err(|err| {
+                error!("Failed to write credential for {target_name}: {err}");
+                StorageError::WindowsError(err.code().0)
+            })?;
         }
 
-        info!("Stored credential securely in Credential Manager: {}", target_name);
+        info!(
+            "Stored credential securely in Credential Manager: {}",
+            target_name
+        );
         Ok(())
     }
 
@@ -79,34 +107,49 @@ impl CredentialStorage {
 
     #[cfg(windows)]
     pub fn read_secret(target_name: &str) -> Result<String, StorageError> {
-        use windows::core::PCWSTR;
+        use windows::core::{HRESULT, PCWSTR};
+        use windows::Win32::Foundation::ERROR_NOT_FOUND;
+
+        if target_name.is_empty() || target_name.contains('\0') {
+            return Err(StorageError::InvalidTargetName);
+        }
         use windows::Win32::Security::Credentials::{
-            CredFree, CredReadW, PCREDENTIALW, CRED_TYPE_GENERIC,
+            CredFree, CredReadW, CREDENTIALW, CRED_TYPE_GENERIC,
         };
 
-        let target_wide: Vec<u16> = target_name.encode_utf16().chain(std::iter::once(0)).collect();
-        let mut p_cred: *mut windows::Win32::Security::Credentials::CREDENTIALW = std::ptr::null_mut();
+        let target_wide: Vec<u16> = target_name
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        let mut credential: *mut CREDENTIALW = std::ptr::null_mut();
 
         unsafe {
-            if !CredReadW(
+            if let Err(err) = CredReadW(
                 PCWSTR(target_wide.as_ptr()),
                 CRED_TYPE_GENERIC,
                 0,
-                &mut p_cred as *mut PCREDENTIALW as *mut _,
-            ).as_bool() {
+                &mut credential,
+            ) {
+                if err.code() == HRESULT::from_win32(ERROR_NOT_FOUND.0) {
+                    return Err(StorageError::NotFound(target_name.to_string()));
+                }
+                return Err(StorageError::WindowsError(err.code().0));
+            }
+
+            if credential.is_null() {
                 return Err(StorageError::NotFound(target_name.to_string()));
             }
 
-            if p_cred.is_null() {
-                return Err(StorageError::NotFound(target_name.to_string()));
-            }
+            let cred = &*credential;
+            let blob = if cred.CredentialBlobSize == 0 {
+                Vec::new()
+            } else {
+                std::slice::from_raw_parts(cred.CredentialBlob, cred.CredentialBlobSize as usize)
+                    .to_vec()
+            };
+            CredFree(credential.cast::<std::ffi::c_void>() as *const std::ffi::c_void);
 
-            let cred = &*p_cred;
-            let blob_slice = std::slice::from_raw_parts(cred.CredentialBlob, cred.CredentialBlobSize as usize);
-            let secret = String::from_utf8(blob_slice.to_vec()).map_err(|_| StorageError::InvalidUtf8)?;
-
-            CredFree(p_cred as *mut _);
-            Ok(secret)
+            String::from_utf8(blob).map_err(|_| StorageError::InvalidUtf8)
         }
     }
 
@@ -120,14 +163,31 @@ impl CredentialStorage {
         use windows::core::PCWSTR;
         use windows::Win32::Security::Credentials::{CredDeleteW, CRED_TYPE_GENERIC};
 
-        let target_wide: Vec<u16> = target_name.encode_utf16().chain(std::iter::once(0)).collect();
-        unsafe {
-            if !CredDeleteW(PCWSTR(target_wide.as_ptr()), CRED_TYPE_GENERIC, 0).as_bool() {
-                let err = windows::Win32::Foundation::GetLastError();
-                return Err(StorageError::Win32Error(err.0));
-            }
+        if target_name.is_empty() || target_name.contains('\0') {
+            return Err(StorageError::InvalidTargetName);
         }
-        info!("Deleted credential from Credential Manager: {}", target_name);
+
+        let target_wide: Vec<u16> = target_name
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        unsafe {
+            CredDeleteW(PCWSTR(target_wide.as_ptr()), CRED_TYPE_GENERIC, 0).map_err(|err| {
+                if err.code()
+                    == windows::core::HRESULT::from_win32(
+                        windows::Win32::Foundation::ERROR_NOT_FOUND.0,
+                    )
+                {
+                    StorageError::NotFound(target_name.to_string())
+                } else {
+                    StorageError::WindowsError(err.code().0)
+                }
+            })?;
+        }
+        info!(
+            "Deleted credential from Credential Manager: {}",
+            target_name
+        );
         Ok(())
     }
 
@@ -145,6 +205,30 @@ mod tests {
     fn test_mask_key() {
         assert_eq!(CredentialStorage::mask_key(""), "未配置");
         assert_eq!(CredentialStorage::mask_key("sk-1234"), "********");
-        assert_eq!(CredentialStorage::mask_key("sk-proj-12345678abcdef"), "sk-...cdef");
+        assert_eq!(
+            CredentialStorage::mask_key("sk-proj-12345678abcdef"),
+            "sk-...cdef"
+        );
+        assert_eq!(
+            CredentialStorage::mask_key("密钥前缀-123456"),
+            "密钥前...3456"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn rejects_invalid_target_name_and_oversized_secrets() {
+        assert!(matches!(
+            CredentialStorage::store_secret("", "secret"),
+            Err(StorageError::InvalidTargetName)
+        ));
+        assert!(matches!(
+            CredentialStorage::store_secret("bad\0target", "secret"),
+            Err(StorageError::InvalidTargetName)
+        ));
+        assert!(matches!(
+            CredentialStorage::store_secret("Snipe/Test", &"x".repeat(2561)),
+            Err(StorageError::SecretTooLarge { .. })
+        ));
     }
 }

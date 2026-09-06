@@ -35,14 +35,16 @@ pub fn encode_frame(frame: &Frame, format: &str, quality: u8) -> Result<Vec<u8>,
         }
         "jpg" | "jpeg" => {
             // Drop alpha for standard JPEG
-            let mut rgb_pixels = Vec::with_capacity((rgba_frame.width * rgba_frame.height * 3) as usize);
+            let mut rgb_pixels =
+                Vec::with_capacity((rgba_frame.width * rgba_frame.height * 3) as usize);
             for chunk in rgba_frame.pixels.chunks_exact(4) {
                 rgb_pixels.push(chunk[0]);
                 rgb_pixels.push(chunk[1]);
                 rgb_pixels.push(chunk[2]);
             }
 
-            let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buffer, quality);
+            let mut encoder =
+                image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buffer, quality);
             encoder.encode(
                 &rgb_pixels,
                 rgba_frame.width,

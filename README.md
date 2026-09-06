@@ -1,20 +1,24 @@
-# Snipe 🎯
+# Snipe
 
-> 面向 Windows 10/11 的现代化、高效率开源截图工具。
+> 面向 Windows 10/11 的 Rust 截图工具，目前处于开发预览阶段。
 
-Snipe 采用 **Rust + Slint + Win32** 架构构建，专为桌面极速体验设计，支持常规截图、截图标注、多钉图置顶、颜色拾取、长截图拼接以及基于大语言模型的 AI 视觉 OCR 与截图翻译。
+Snipe 使用 Rust、Slint 与 Win32 构建。当前仓库包含 GDI 截图、区域选择、复制/保存、多钉图基础窗口、AI OCR/翻译调用、标注栅格化和长图拼接等基础实现，但尚未完成 `PLAN.md` 定义的端到端 MVP，不应作为稳定正式版发布。
+
+当前完成度和发布阻塞项见 [`docs/implementation-status.md`](docs/implementation-status.md)。
 
 ---
 
-## 核心特性
+## 当前可验证能力
 
-- ⚡ **超轻量与极速响应**：基于原生 Win32 消息分发与 Slint 声明式 GUI，无 Electron/Node 运行时开销。
-- 📐 **精准高 DPI 坐标体系**：全面支持 Per-Monitor DPI V2、多显示器混用与负坐标虚拟桌面。
-- 🖼 **多图置顶 (钉图)**：支持同时置顶多个截图窗口，独立调整透明度与鼠标穿透。
-- 🎨 **屏幕拾色器**：实时放大镜像素网格预览，一键复制 HEX / RGB / HSL / HSV 颜色格式。
-- ✏ **矢量标注系统**：矩形、椭圆、箭头、自由画笔、马赛克、模糊、文本及序号标记，无损原图导出。
-- 📜 **滚动长截图**：基于图像特征的连续重叠估算与自动拼接。
-- 🤖 **AI 多模态 OCR / 翻译**：支持 OpenAI 官方以及兼容 OpenAI 协议的自定义第三方端点，API Key 使用 Windows Credential Manager 安全存储，绝不泄露到普通配置或日志。
+- 单实例、托盘后台常驻和全局快捷键基础流程。
+- GDI 虚拟桌面截图、矩形选区、复制和保存。
+- 多个基础钉图窗口，以及复制、保存和关闭操作。
+- OpenAI Chat Completions 风格的图片 OCR/翻译调用。
+- Windows Credential Manager 中的 API Key 基础读写。
+- 标注数据模型、撤销/重做栈和 CPU 栅格合成库。
+- 连续等尺寸帧的垂直重叠估算和拼接库。
+
+长截图采集、完整标注编辑器、钉图高级交互、完整取色器、WGC/DXGI 捕获、设置即时生效以及发布验收仍在开发中。
 
 ---
 
@@ -31,13 +35,13 @@ Snipe 采用 **Rust + Slint + Win32** 架构构建，专为桌面极速体验设
 
 ## 构建与打包
 
-本项目配备 GitHub Actions 自动化 CI/CD 流水线，推送 Tag（例如 `v0.1.0`）即可自动触发编译、测试并使用 Inno Setup 生成单文件安装程序 `Snipe-Setup-*-x64.exe` 与免安装便携包。
+本项目配备 Windows GitHub Actions CI/CD。推送与 `Cargo.toml` 版本一致的 Tag（例如 `v0.1.0`）会执行锁定依赖测试，并使用 Inno Setup 生成单文件安装程序 `Snipe-Setup-*-x64.exe`。发布前必须提交 `Cargo.lock`；当前不生成便携包。
 
 ### 本地编译 (需已安装 Rust 及 MSVC C++ 工具链)
 
 ```powershell
 # 编译 Release 二进制
-cargo build --workspace --release
+cargo build --workspace --release --locked
 
 # 打包安装程序 (需预先安装 Inno Setup 6)
 ./scripts/package.ps1

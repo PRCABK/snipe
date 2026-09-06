@@ -1,7 +1,7 @@
+use crate::error::AiError;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
-use crate::error::AiError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrResult {

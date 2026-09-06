@@ -1,6 +1,4 @@
 use domain::HotkeyAction;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, warn};
 
@@ -27,13 +25,12 @@ pub struct Win32MessageWindow {
 #[cfg(windows)]
 impl Win32MessageWindow {
     pub fn new(sender: UnboundedSender<SystemMessage>) -> Result<Self, String> {
-        use std::mem::size_of;
         use windows::core::PCWSTR;
         use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
         use windows::Win32::System::LibraryLoader::GetModuleHandleW;
         use windows::Win32::UI::WindowsAndMessaging::{
             CreateWindowExW, DefWindowProcW, RegisterClassW, RegisterWindowMessageW,
-            SetWindowLongPtrW, WNDCLASSW, WS_EX_TOOLWINDOW, WS_POPUP, GWLP_USERDATA,
+            SetWindowLongPtrW, GWLP_USERDATA, WNDCLASSW, WS_EX_TOOLWINDOW, WS_POPUP,
         };
 
         static TASKBAR_MSG_ID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
@@ -117,7 +114,8 @@ impl Win32MessageWindow {
                 windows::Win32::UI::WindowsAndMessaging::HMENU::default(),
                 hinstance,
                 None,
-            ).map_err(|e| e.to_string())?;
+            )
+            .map_err(|e| e.to_string())?;
 
             let boxed_sender = Box::new(sender);
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, Box::into_raw(boxed_sender) as isize);
@@ -131,10 +129,30 @@ impl Win32MessageWindow {
 }
 
 #[cfg(windows)]
+impl Drop for Win32MessageWindow {
+    fn drop(&mut self) {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            DestroyWindow, GetWindowLongPtrW, SetWindowLongPtrW, GWLP_USERDATA,
+        };
+
+        unsafe {
+            let sender_ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA);
+            SetWindowLongPtrW(self.hwnd, GWLP_USERDATA, 0);
+            if sender_ptr != 0 {
+                drop(Box::from_raw(
+                    sender_ptr as *mut UnboundedSender<SystemMessage>,
+                ));
+            }
+            let _ = DestroyWindow(self.hwnd);
+        }
+    }
+}
+
+#[cfg(windows)]
 pub fn add_tray_icon(hwnd: windows::Win32::Foundation::HWND) {
     use std::mem::size_of;
     use windows::Win32::UI::Shell::{
-        Shell_NotifyIconW, NIM_ADD, NOTIFYICONDATAW, NIF_ICON, NIF_MESSAGE, NIF_TIP,
+        Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NOTIFYICONDATAW,
     };
     use windows::Win32::UI::WindowsAndMessaging::{LoadIconW, IDI_APPLICATION};
 
@@ -199,7 +217,15 @@ fn show_tray_menu(hwnd: windows::Win32::Foundation::HWND) {
         let _ = GetCursorPos(&mut pt);
 
         SetForegroundWindow(hwnd);
-        TrackPopupMenu(menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, None);
+        TrackPopupMenu(
+            menu,
+            TPM_BOTTOMALIGN | TPM_LEFTALIGN,
+            pt.x,
+            pt.y,
+            0,
+            hwnd,
+            None,
+        );
         let _ = DestroyMenu(menu);
     }
 }
