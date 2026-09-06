@@ -8,15 +8,15 @@ pub fn frame_to_slint_image(frame: &Frame) -> Image {
     let mut buffer = SharedPixelBuffer::<Rgba8Pixel>::new(rgba.width, rgba.height);
     let slice = buffer.make_mut_slice();
 
-    for (i, chunk) in rgba.pixels.chunks_exact(4).enumerate() {
-        if i < slice.len() {
-            slice[i] = Rgba8Pixel {
-                r: chunk[0],
-                g: chunk[1],
-                b: chunk[2],
-                a: chunk[3],
-            };
-        }
+    let (pixels, remainder) = rgba.pixels.as_chunks::<4>();
+    debug_assert!(remainder.is_empty());
+    for (target, source) in slice.iter_mut().zip(pixels) {
+        *target = Rgba8Pixel {
+            r: source[0],
+            g: source[1],
+            b: source[2],
+            a: source[3],
+        };
     }
 
     Image::from_rgba8(buffer)
