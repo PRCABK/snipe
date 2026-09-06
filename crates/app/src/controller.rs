@@ -4,6 +4,7 @@ use capture_windows::WindowsCaptureService;
 use config::AppConfig;
 use domain::{Frame, ImagePxRect};
 use secure_storage_windows::{CredentialStorage, DEFAULT_TARGET_NAME};
+use slint::ComponentHandle;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;

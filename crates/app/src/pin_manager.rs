@@ -1,4 +1,5 @@
 use domain::Frame;
+use slint::ComponentHandle;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
