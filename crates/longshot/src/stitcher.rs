@@ -103,8 +103,7 @@ pub fn estimate_vertical_scroll(
             }
         }
 
-        if sample_count > 0 {
-            let avg_diff = diff_sum / sample_count;
+        if let Some(avg_diff) = diff_sum.checked_div(sample_count) {
             if avg_diff < min_diff {
                 min_diff = avg_diff;
                 best_shift = shift;

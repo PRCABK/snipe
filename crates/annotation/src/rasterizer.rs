@@ -31,10 +31,7 @@ pub fn composite_annotations(base_frame: &Frame, items: &[AnnotationItem]) -> Fr
             AnnotationKind::Rect(r) => {
                 draw_rect(
                     &mut result,
-                    r.x,
-                    r.y,
-                    r.width,
-                    r.height,
+                    (r.x, r.y, r.width, r.height),
                     r.stroke_color,
                     r.stroke_width,
                     r.fill_color,
@@ -43,10 +40,7 @@ pub fn composite_annotations(base_frame: &Frame, items: &[AnnotationItem]) -> Fr
             AnnotationKind::Ellipse(e) => {
                 draw_ellipse(
                     &mut result,
-                    e.cx,
-                    e.cy,
-                    e.rx,
-                    e.ry,
+                    (e.cx, e.cy, e.rx, e.ry),
                     e.stroke_color,
                     e.stroke_width,
                     e.fill_color,
@@ -132,18 +126,16 @@ fn set_pixel_blend(frame: &mut Frame, x: i32, y: i32, color: ColorRgba) {
 
 fn draw_rect(
     frame: &mut Frame,
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
+    bounds: (f32, f32, f32, f32),
     stroke: ColorRgba,
     stroke_width: f32,
     fill: Option<ColorRgba>,
 ) {
+    let (x, y, width, height) = bounds;
     let ix = x.round() as i32;
     let iy = y.round() as i32;
-    let iw = w.round() as i32;
-    let ih = h.round() as i32;
+    let iw = width.round() as i32;
+    let ih = height.round() as i32;
     let sw = stroke_width.max(1.0).round() as i32;
 
     if let Some(f_color) = fill {
@@ -224,14 +216,12 @@ fn draw_arrow(frame: &mut Frame, x1: f32, y1: f32, x2: f32, y2: f32, color: Colo
 
 fn draw_ellipse(
     frame: &mut Frame,
-    cx: f32,
-    cy: f32,
-    rx: f32,
-    ry: f32,
+    geometry: (f32, f32, f32, f32),
     stroke: ColorRgba,
     stroke_width: f32,
     fill: Option<ColorRgba>,
 ) {
+    let (cx, cy, rx, ry) = geometry;
     let min_x = (cx - rx - stroke_width).floor() as i32;
     let max_x = (cx + rx + stroke_width).ceil() as i32;
     let min_y = (cy - ry - stroke_width).floor() as i32;
@@ -297,10 +287,7 @@ fn draw_step_badge(
 ) {
     draw_ellipse(
         frame,
-        cx,
-        cy,
-        radius,
-        radius,
+        (cx, cy, radius, radius),
         ColorRgba::rgb(255, 255, 255),
         2.0,
         Some(bg_color),
@@ -342,8 +329,7 @@ fn draw_char_5x7(frame: &mut Frame, x: i32, y: i32, ch: char, color: ColorRgba) 
         _ => [0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F],
     };
 
-    for row in 0..7 {
-        let mask = glyph[row];
+    for (row, mask) in glyph.into_iter().enumerate() {
         for col in 0..5 {
             if (mask & (0x10 >> col)) != 0 {
                 set_pixel_blend(frame, x + col, y + row as i32, color);
