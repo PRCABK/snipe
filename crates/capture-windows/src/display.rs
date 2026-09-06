@@ -56,12 +56,17 @@ pub fn enumerate_displays() -> Result<Vec<DisplayInfo>, CaptureError> {
 
     unsafe {
         let displays_ptr = &mut displays as *mut Vec<DisplayInfo>;
-        EnumDisplayMonitors(
+        let enumerated = EnumDisplayMonitors(
             HDC::default(),
             None,
             Some(monitor_enum_proc),
             LPARAM(displays_ptr as isize),
         );
+        if !enumerated.as_bool() {
+            return Err(CaptureError::PlatformError(
+                "Failed to enumerate active displays".to_string(),
+            ));
+        }
     }
 
     if displays.is_empty() {

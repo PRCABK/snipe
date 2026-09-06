@@ -46,7 +46,7 @@ impl CaptureService for WindowsCaptureService {
                 let disp = displays
                     .into_iter()
                     .find(|d| d.id == id)
-                    .ok_or_else(|| CaptureError::DisplayNotFound(id))?;
+                    .ok_or(CaptureError::DisplayNotFound(id))?;
                 disp.bounds
             }
             CaptureTarget::Window(hwnd_id) => {

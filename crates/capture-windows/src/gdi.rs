@@ -7,7 +7,7 @@ pub fn capture_desktop_rect(rect: DesktopPxRect) -> Result<Frame, CaptureError> 
     use windows::Win32::Foundation::HWND;
     use windows::Win32::Graphics::Gdi::{
         BitBlt, CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, GetDC, ReleaseDC,
-        SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HDC, HGDIOBJ, ROP_CODE,
+        SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HGDIOBJ, ROP_CODE,
     };
 
     if rect.width == 0 || rect.height == 0 {
@@ -48,7 +48,7 @@ pub fn capture_desktop_rect(rect: DesktopPxRect) -> Result<Frame, CaptureError> 
             ));
         }
 
-        let mut bi = BITMAPINFO {
+        let bi = BITMAPINFO {
             bmiHeader: BITMAPINFOHEADER {
                 biSize: size_of::<BITMAPINFOHEADER>() as u32,
                 biWidth: capture_width,
@@ -118,8 +118,10 @@ pub fn capture_desktop_rect(rect: DesktopPxRect) -> Result<Frame, CaptureError> 
         }
 
         // Ensure alpha is 255 for desktop captures
-        for chunk in pixels.chunks_exact_mut(4) {
-            chunk[3] = 255;
+        let (pixel_chunks, remainder) = pixels.as_chunks_mut::<4>();
+        debug_assert!(remainder.is_empty());
+        for pixel in pixel_chunks {
+            pixel[3] = 255;
         }
 
         Ok(Frame {
