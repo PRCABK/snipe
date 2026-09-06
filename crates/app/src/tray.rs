@@ -74,7 +74,7 @@ impl Win32MessageWindow {
                         }
                         return LRESULT(0);
                     } else if msg == WM_COMMAND {
-                        let menu_id = (wparam.0 & 0xffff) as usize;
+                        let menu_id = wparam.0 & 0xffff;
                         let _ = sender.send(SystemMessage::TrayAction(menu_id));
                         return LRESULT(0);
                     } else if msg == WM_DESTROY {
@@ -158,13 +158,15 @@ pub fn add_tray_icon(hwnd: windows::Win32::Foundation::HWND) {
 
     unsafe {
         let hicon = LoadIconW(None, IDI_APPLICATION).unwrap_or_default();
-        let mut nid = NOTIFYICONDATAW::default();
-        nid.cbSize = size_of::<NOTIFYICONDATAW>() as u32;
-        nid.hWnd = hwnd;
-        nid.uID = 1;
-        nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-        nid.uCallbackMessage = WM_TRAYICON;
-        nid.hIcon = hicon;
+        let mut nid = NOTIFYICONDATAW {
+            cbSize: size_of::<NOTIFYICONDATAW>() as u32,
+            hWnd: hwnd,
+            uID: 1,
+            uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP,
+            uCallbackMessage: WM_TRAYICON,
+            hIcon: hicon,
+            ..Default::default()
+        };
 
         let tip = "Snipe 截图工具\0".encode_utf16().collect::<Vec<u16>>();
         let copy_len = tip.len().min(nid.szTip.len());
@@ -181,10 +183,12 @@ pub fn remove_tray_icon(hwnd: windows::Win32::Foundation::HWND) {
     use windows::Win32::UI::Shell::{Shell_NotifyIconW, NIM_DELETE, NOTIFYICONDATAW};
 
     unsafe {
-        let mut nid = NOTIFYICONDATAW::default();
-        nid.cbSize = size_of::<NOTIFYICONDATAW>() as u32;
-        nid.hWnd = hwnd;
-        nid.uID = 1;
+        let nid = NOTIFYICONDATAW {
+            cbSize: size_of::<NOTIFYICONDATAW>() as u32,
+            hWnd: hwnd,
+            uID: 1,
+            ..Default::default()
+        };
         let _ = Shell_NotifyIconW(NIM_DELETE, &nid);
         info!("Removed system tray icon");
     }
@@ -216,8 +220,8 @@ fn show_tray_menu(hwnd: windows::Win32::Foundation::HWND) {
         let mut pt = POINT::default();
         let _ = GetCursorPos(&mut pt);
 
-        SetForegroundWindow(hwnd);
-        TrackPopupMenu(
+        let _ = SetForegroundWindow(hwnd);
+        let _ = TrackPopupMenu(
             menu,
             TPM_BOTTOMALIGN | TPM_LEFTALIGN,
             pt.x,

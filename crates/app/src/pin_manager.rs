@@ -7,10 +7,8 @@ use std::sync::Arc;
 use tracing::info;
 use ui_slint::{frame_to_slint_image, PinWindow};
 
-pub struct PinnedItem {
-    pub id: String,
-    pub frame: Arc<Frame>,
-    pub window: PinWindow,
+struct PinnedItem {
+    window: PinWindow,
 }
 
 #[derive(Clone, Default)]
@@ -64,11 +62,7 @@ impl PinManager {
 
         window.show().unwrap();
 
-        let item = PinnedItem {
-            id: id.clone(),
-            frame: frame_arc,
-            window,
-        };
+        let item = PinnedItem { window };
 
         self.pins.borrow_mut().insert(id.clone(), item);
         info!("Spawned pin window with id {}", id);
