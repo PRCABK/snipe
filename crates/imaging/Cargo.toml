@@ -11,3 +11,4 @@ thiserror = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 arboard = { workspace = true }
+uuid = { workspace = true }

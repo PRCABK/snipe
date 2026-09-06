@@ -1,5 +1,5 @@
 use capture_core::{CaptureError, DisplayInfo};
-use domain::{DesktopPxPoint, DesktopPxRect};
+use domain::DesktopPxRect;
 
 #[cfg(windows)]
 pub fn enumerate_displays() -> Result<Vec<DisplayInfo>, CaptureError> {

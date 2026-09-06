@@ -31,7 +31,7 @@ pub fn capture_desktop_rect(rect: DesktopPxRect) -> Result<Frame, CaptureError> 
 
         let hdc_mem = CreateCompatibleDC(hdc_screen);
         if hdc_mem.is_invalid() {
-            ReleaseDC(HWND::default(), hdc_screen);
+            let _ = ReleaseDC(HWND::default(), hdc_screen);
             return Err(CaptureError::PlatformError("Failed to create compatible DC".to_string()));
         }
 
@@ -63,8 +63,8 @@ pub fn capture_desktop_rect(rect: DesktopPxRect) -> Result<Frame, CaptureError> 
         );
 
         if hbm.is_err() || bits.is_null() {
-            DeleteDC(hdc_mem);
-            ReleaseDC(HWND::default(), hdc_screen);
+            let _ = DeleteDC(hdc_mem);
+            let _ = ReleaseDC(HWND::default(), hdc_screen);
             return Err(CaptureError::PlatformError("Failed to create DIB section".to_string()));
         }
 
@@ -95,7 +95,7 @@ pub fn capture_desktop_rect(rect: DesktopPxRect) -> Result<Frame, CaptureError> 
         SelectObject(hdc_mem, old_obj);
         let _ = DeleteObject(HGDIOBJ(hbm_obj.0));
         let _ = DeleteDC(hdc_mem);
-        ReleaseDC(HWND::default(), hdc_screen);
+        let _ = ReleaseDC(HWND::default(), hdc_screen);
 
         if !blt_res.as_bool() {
             return Err(CaptureError::PlatformError("BitBlt screen capture failed".to_string()));

@@ -36,12 +36,15 @@ impl Win32MessageWindow {
             SetWindowLongPtrW, WNDCLASSW, WS_EX_TOOLWINDOW, WS_POPUP, GWLP_USERDATA,
         };
 
+        static TASKBAR_MSG_ID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
         let class_name: Vec<u16> = "Snipe_MessageWindowClass\0".encode_utf16().collect();
         let taskbar_msg: Vec<u16> = "TaskbarCreated\0".encode_utf16().collect();
 
         unsafe {
-            let taskbar_msg_id = RegisterWindowMessageW(PCWSTR(taskbar_msg.as_ptr()));
-            let hinstance = GetModuleHandleW(None).map_err(|e| e.to_string())?;
+            let reg_id = RegisterWindowMessageW(PCWSTR(taskbar_msg.as_ptr()));
+            TASKBAR_MSG_ID.store(reg_id, std::sync::atomic::Ordering::Relaxed);
+            let hmodule = GetModuleHandleW(None).map_err(|e| e.to_string())?;
+            let hinstance = windows::Win32::Foundation::HINSTANCE(hmodule.0);
 
             unsafe extern "system" fn wnd_proc(
                 hwnd: HWND,
@@ -56,8 +59,12 @@ impl Win32MessageWindow {
                 let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
                 if ptr != 0 {
                     let sender = &*(ptr as *const UnboundedSender<SystemMessage>);
+                    let taskbar_id = TASKBAR_MSG_ID.load(std::sync::atomic::Ordering::Relaxed);
 
-                    if msg == WM_HOTKEY {
+                    if taskbar_id != 0 && msg == taskbar_id {
+                        let _ = sender.send(SystemMessage::ExplorerRestarted);
+                        return LRESULT(0);
+                    } else if msg == WM_HOTKEY {
                         let id = wparam.0 as i32;
                         if let Some(action) = crate::hotkey::map_hotkey_id_to_action(id) {
                             let _ = sender.send(SystemMessage::Hotkey(action));
@@ -87,7 +94,7 @@ impl Win32MessageWindow {
                 lpfnWndProc: Some(wnd_proc),
                 cbClsExtra: 0,
                 cbWndExtra: 0,
-                hInstance: hinstance.into(),
+                hInstance: hinstance,
                 hIcon: windows::Win32::UI::WindowsAndMessaging::HICON::default(),
                 hCursor: windows::Win32::UI::WindowsAndMessaging::HCURSOR::default(),
                 hbrBackground: windows::Win32::Graphics::Gdi::HBRUSH::default(),
@@ -95,7 +102,7 @@ impl Win32MessageWindow {
                 lpszClassName: PCWSTR(class_name.as_ptr()),
             };
 
-            RegisterClassW(&wnd_class);
+            let _ = RegisterClassW(&wnd_class);
 
             let hwnd = CreateWindowExW(
                 WS_EX_TOOLWINDOW,

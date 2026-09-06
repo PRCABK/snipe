@@ -61,10 +61,11 @@ impl CredentialStorage {
         };
 
         unsafe {
-            CredWriteW(&mut cred, 0).map_err(|e| {
-                error!("Failed to write credential for {}: {:?}", target_name, e);
-                StorageError::Win32Error(e.code().0 as u32)
-            })?;
+            if !CredWriteW(&mut cred, 0).as_bool() {
+                let err = windows::Win32::Foundation::GetLastError();
+                error!("Failed to write credential for {}: {:?}", target_name, err.0);
+                return Err(StorageError::Win32Error(err.0));
+            }
         }
 
         info!("Stored credential securely in Credential Manager: {}", target_name);
@@ -87,15 +88,13 @@ impl CredentialStorage {
         let mut p_cred: *mut windows::Win32::Security::Credentials::CREDENTIALW = std::ptr::null_mut();
 
         unsafe {
-            let res = CredReadW(
+            if !CredReadW(
                 PCWSTR(target_wide.as_ptr()),
                 CRED_TYPE_GENERIC,
                 0,
                 &mut p_cred as *mut PCREDENTIALW as *mut _,
-            );
-
-            if let Err(e) = res {
-                return Err(StorageError::NotFound(e.to_string()));
+            ).as_bool() {
+                return Err(StorageError::NotFound(target_name.to_string()));
             }
 
             if p_cred.is_null() {
@@ -123,9 +122,10 @@ impl CredentialStorage {
 
         let target_wide: Vec<u16> = target_name.encode_utf16().chain(std::iter::once(0)).collect();
         unsafe {
-            CredDeleteW(PCWSTR(target_wide.as_ptr()), CRED_TYPE_GENERIC, 0).map_err(|e| {
-                StorageError::Win32Error(e.code().0 as u32)
-            })?;
+            if !CredDeleteW(PCWSTR(target_wide.as_ptr()), CRED_TYPE_GENERIC, 0).as_bool() {
+                let err = windows::Win32::Foundation::GetLastError();
+                return Err(StorageError::Win32Error(err.0));
+            }
         }
         info!("Deleted credential from Credential Manager: {}", target_name);
         Ok(())

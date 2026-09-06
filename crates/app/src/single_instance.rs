@@ -56,9 +56,13 @@ pub fn start_ipc_server(cmd_tx: UnboundedSender<String>, shutdown_flag: Arc<Atom
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
         info!("Starting IPC named pipe server on {}", PIPE_NAME);
+        let mut is_first = true;
         while !shutdown_flag.load(Ordering::Relaxed) {
-            let server = match ServerOptions::new().first_pipe_instance(true).create(PIPE_NAME) {
-                Ok(s) => s,
+            let server = match ServerOptions::new().first_pipe_instance(is_first).create(PIPE_NAME) {
+                Ok(s) => {
+                    is_first = false;
+                    s
+                }
                 Err(e) => {
                     warn!("Failed to create named pipe instance: {}", e);
                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;

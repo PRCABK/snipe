@@ -47,6 +47,10 @@ impl LongshotSession {
         self.frames.len()
     }
 
+    pub fn duration(&self) -> std::time::Duration {
+        self.start_time.elapsed()
+    }
+
     pub fn finish(&mut self) -> Result<Frame, LongshotError> {
         let result = stitch_frames(&self.frames, &self.options);
         match &result {
