@@ -37,10 +37,10 @@ pub fn encode_frame(frame: &Frame, format: &str, quality: u8) -> Result<Vec<u8>,
             // Drop alpha for standard JPEG
             let mut rgb_pixels =
                 Vec::with_capacity((rgba_frame.width * rgba_frame.height * 3) as usize);
-            for chunk in rgba_frame.pixels.chunks_exact(4) {
-                rgb_pixels.push(chunk[0]);
-                rgb_pixels.push(chunk[1]);
-                rgb_pixels.push(chunk[2]);
+            let (pixels, remainder) = rgba_frame.pixels.as_chunks::<4>();
+            debug_assert!(remainder.is_empty());
+            for pixel in pixels {
+                rgb_pixels.extend_from_slice(&pixel[..3]);
             }
 
             let mut encoder =

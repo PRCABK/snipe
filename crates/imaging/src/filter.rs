@@ -35,21 +35,20 @@ pub fn apply_mosaic(frame: &mut Frame, rect: ImagePxRect, block_size: u32) {
                 }
             }
 
-            if count > 0 {
-                let avg_0 = (sum_0 / count) as u8;
-                let avg_1 = (sum_1 / count) as u8;
-                let avg_2 = (sum_2 / count) as u8;
-                let avg_3 = (sum_3 / count) as u8;
+            if let Some(avg_0) = sum_0.checked_div(count) {
+                let avg_1 = sum_1.checked_div(count).unwrap_or_default();
+                let avg_2 = sum_2.checked_div(count).unwrap_or_default();
+                let avg_3 = sum_3.checked_div(count).unwrap_or_default();
 
                 // Fill block with average
                 for y in by..(by + bh) {
                     for x in bx..(bx + bw) {
                         let offset = (y * frame.stride + x * bytes_per_pixel) as usize;
                         if offset + 3 < frame.pixels.len() {
-                            frame.pixels[offset] = avg_0;
-                            frame.pixels[offset + 1] = avg_1;
-                            frame.pixels[offset + 2] = avg_2;
-                            frame.pixels[offset + 3] = avg_3;
+                            frame.pixels[offset] = avg_0 as u8;
+                            frame.pixels[offset + 1] = avg_1 as u8;
+                            frame.pixels[offset + 2] = avg_2 as u8;
+                            frame.pixels[offset + 3] = avg_3 as u8;
                         }
                     }
                 }
@@ -91,12 +90,12 @@ pub fn apply_box_blur(frame: &mut Frame, rect: ImagePxRect, radius: u32) {
                 }
             }
 
-            if count > 0 {
+            if let Some(avg_0) = sum_0.checked_div(count) {
                 let offset = (y * frame.stride + x * bytes_per_pixel) as usize;
-                temp[offset] = (sum_0 / count) as u8;
-                temp[offset + 1] = (sum_1 / count) as u8;
-                temp[offset + 2] = (sum_2 / count) as u8;
-                temp[offset + 3] = (sum_3 / count) as u8;
+                temp[offset] = avg_0 as u8;
+                temp[offset + 1] = sum_1.checked_div(count).unwrap_or_default() as u8;
+                temp[offset + 2] = sum_2.checked_div(count).unwrap_or_default() as u8;
+                temp[offset + 3] = sum_3.checked_div(count).unwrap_or_default() as u8;
             }
         }
     }
@@ -123,12 +122,12 @@ pub fn apply_box_blur(frame: &mut Frame, rect: ImagePxRect, radius: u32) {
                 }
             }
 
-            if count > 0 {
+            if let Some(avg_0) = sum_0.checked_div(count) {
                 let offset = (y * frame.stride + x * bytes_per_pixel) as usize;
-                frame.pixels[offset] = (sum_0 / count) as u8;
-                frame.pixels[offset + 1] = (sum_1 / count) as u8;
-                frame.pixels[offset + 2] = (sum_2 / count) as u8;
-                frame.pixels[offset + 3] = (sum_3 / count) as u8;
+                frame.pixels[offset] = avg_0 as u8;
+                frame.pixels[offset + 1] = sum_1.checked_div(count).unwrap_or_default() as u8;
+                frame.pixels[offset + 2] = sum_2.checked_div(count).unwrap_or_default() as u8;
+                frame.pixels[offset + 3] = sum_3.checked_div(count).unwrap_or_default() as u8;
             }
         }
     }
