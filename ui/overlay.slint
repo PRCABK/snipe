@@ -1,0 +1,175 @@
+import { Button } from "std-widgets.slint";
+
+export component OverlayWindow inherits Window {
+    in-out property <int> selection-x: 0;
+    in-out property <int> selection-y: 0;
+    in-out property <int> selection-w: 0;
+    in-out property <int> selection-h: 0;
+    in-out property <bool> has-selection: false;
+    in-out property <string> dimension-text: "";
+    in-out property <string> color-hex: "#000000";
+    in-out property <string> color-rgb: "rgb(0,0,0)";
+    in-out property <int> mouse-x: 0;
+    in-out property <int> mouse-y: 0;
+
+    callback pointer-down(int, int);
+    callback pointer-move(int, int);
+    callback pointer-up(int, int);
+    callback action-copy();
+    callback action-save();
+    callback action-pin();
+    callback action-annotate();
+    callback action-ocr();
+    callback action-translate();
+    callback action-cancel();
+
+    default-font-family: "Segoe UI, Microsoft YaHei, sans-serif";
+    no-frame: true;
+    always-on-top: true;
+    background: #00000028;
+
+    TouchArea {
+        width: 100%;
+        height: 100%;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.pointer-down(self.mouse-x / 1px, self.mouse-y / 1px);
+            } else if (event.kind == PointerEventKind.up) {
+                root.pointer-up(self.mouse-x / 1px, self.mouse-y / 1px);
+            }
+        }
+        moved => {
+            root.pointer-move(self.mouse-x / 1px, self.mouse-y / 1px);
+        }
+    }
+
+    // Selection border box
+    if root.has-selection : Rectangle {
+        x: root.selection-x * 1px;
+        y: root.selection-y * 1px;
+        width: root.selection-w * 1px;
+        height: root.selection-h * 1px;
+        border-color: #0078D4;
+        border-width: 2px;
+        background: transparent;
+
+        // Size badge at top-left
+        Rectangle {
+            x: 0px;
+            y: -28px;
+            height: 24px;
+            width: 120px;
+            background: #202020EE;
+            border-radius: 4px;
+
+            Text {
+                text: root.dimension-text;
+                color: #FFFFFF;
+                font-size: 12px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Floating action toolbar at bottom-right
+        Rectangle {
+            x: (root.selection-w * 1px) - 340px;
+            y: (root.selection-h * 1px) + 8px;
+            height: 38px;
+            width: 340px;
+            background: #1F1F1FEE;
+            border-radius: 6px;
+            drop-shadow-blur: 8px;
+            drop-shadow-color: #00000060;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 6px;
+                alignment: center;
+
+                Rectangle {
+                    width: 46px;
+                    background: #2D2D2D;
+                    border-radius: 4px;
+                    Text { text: "复制"; color: #E0E0E0; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { root.action-copy(); } }
+                }
+                Rectangle {
+                    width: 46px;
+                    background: #2D2D2D;
+                    border-radius: 4px;
+                    Text { text: "保存"; color: #E0E0E0; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { root.action-save(); } }
+                }
+                Rectangle {
+                    width: 46px;
+                    background: #2D2D2D;
+                    border-radius: 4px;
+                    Text { text: "钉图"; color: #E0E0E0; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { root.action-pin(); } }
+                }
+                Rectangle {
+                    width: 46px;
+                    background: #2D2D2D;
+                    border-radius: 4px;
+                    Text { text: "标注"; color: #E0E0E0; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { root.action-annotate(); } }
+                }
+                Rectangle {
+                    width: 46px;
+                    background: #2D2D2D;
+                    border-radius: 4px;
+                    Text { text: "OCR"; color: #E0E0E0; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { root.action-ocr(); } }
+                }
+                Rectangle {
+                    width: 46px;
+                    background: #2D2D2D;
+                    border-radius: 4px;
+                    Text { text: "翻译"; color: #E0E0E0; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { root.action-translate(); } }
+                }
+                Rectangle {
+                    width: 32px;
+                    background: #C42B1C;
+                    border-radius: 4px;
+                    Text { text: "✕"; color: #FFFFFF; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                    TouchArea { clicked => { root.action-cancel(); } }
+                }
+            }
+        }
+    }
+
+    // Real-time magnifier color badge beside mouse
+    if !root.has-selection : Rectangle {
+        x: (root.mouse-x * 1px) + 16px;
+        y: (root.mouse-y * 1px) + 16px;
+        width: 140px;
+        height: 48px;
+        background: #181818F0;
+        border-radius: 6px;
+        border-color: #444444;
+        border-width: 1px;
+
+        HorizontalLayout {
+            padding: 6px;
+            spacing: 8px;
+
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: 4px;
+                border-color: #666666;
+                border-width: 1px;
+                background: @color-hex;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                Text { text: root.color-hex; color: #FFFFFF; font-size: 11px; font-weight: 600; }
+                Text { text: root.color-rgb; color: #AAAAAA; font-size: 9px; }
+            }
+        }
+    }
+}

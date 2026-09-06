@@ -1,0 +1,21 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock.dist
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.suo
+*.user
+
+# Output artifacts
+/dist/
+*.exe
+*.msi
+*.pdb
+
+# Local config & logs
+/logs/
+/cache/

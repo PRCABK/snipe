@@ -1,0 +1,116 @@
+export component AiResultWindow inherits Window {
+    in-out property <string> title-text: "OCR 识别结果";
+    in-out property <string> model-name: "gpt-4o-mini";
+    in-out property <string> content-text: "";
+    in-out property <bool> is-loading: false;
+    in-out property <string> status-text: "就绪";
+
+    callback copy-clicked();
+    callback close-clicked();
+
+    title: root.title-text;
+    width: 480px;
+    height: 360px;
+    background: #202020;
+    default-font-family: "Segoe UI, Microsoft YaHei, sans-serif";
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        // Header bar
+        HorizontalLayout {
+            height: 28px;
+            alignment: space-between;
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+                Text {
+                    text: root.title-text;
+                    color: #FFFFFF;
+                    font-size: 15px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+                Rectangle {
+                    background: #333333;
+                    border-radius: 4px;
+                    width: 90px;
+                    height: 22px;
+                    Text {
+                        text: root.model-name;
+                        color: #AAAAAA;
+                        font-size: 11px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 28px;
+                height: 24px;
+                background: #333333;
+                border-radius: 4px;
+                Text { text: "✕"; color: #CCCCCC; font-size: 13px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.close-clicked(); } }
+            }
+        }
+
+        // Content Area
+        Rectangle {
+            background: #181818;
+            border-radius: 6px;
+            border-color: #333333;
+            border-width: 1px;
+
+            if root.is-loading : VerticalLayout {
+                alignment: center;
+                spacing: 8px;
+                Text {
+                    text: "正在处理中，请稍候...";
+                    color: #0078D4;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                }
+            }
+
+            if !root.is-loading : TextInput {
+                text: root.content-text;
+                color: #E6E6E6;
+                font-size: 13px;
+                read-only: true;
+                wrap: word-wrap;
+            }
+        }
+
+        // Bottom footer
+        HorizontalLayout {
+            height: 32px;
+            alignment: space-between;
+
+            Text {
+                text: root.status-text;
+                color: #888888;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+
+            Rectangle {
+                width: 100px;
+                height: 30px;
+                background: #0078D4;
+                border-radius: 4px;
+                Text {
+                    text: "复制文本";
+                    color: #FFFFFF;
+                    font-size: 12px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                TouchArea { clicked => { root.copy-clicked(); } }
+            }
+        }
+    }
+}

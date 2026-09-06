@@ -1,0 +1,24 @@
+{
+  "app_name": "Snipe",
+  "tray": {
+    "screenshot": "Capture Screen (F1)",
+    "longshot": "Scrolling Screenshot (Ctrl+Alt+S)",
+    "color_picker": "Pick Color (F3)",
+    "settings": "Preferences",
+    "exit": "Exit Snipe"
+  },
+  "overlay": {
+    "copy": "Copy",
+    "save": "Save",
+    "pin": "Pin",
+    "annotate": "Annotate",
+    "ocr": "OCR",
+    "translate": "Translate"
+  },
+  "settings": {
+    "title": "Snipe Settings",
+    "hotkeys": "Global Hotkeys",
+    "ai_service": "AI Vision Service (OCR / Translation)",
+    "save": "Save Settings"
+  }
+}

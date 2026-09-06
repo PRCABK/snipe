@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/domain",
+    "crates/config",
+    "crates/secure-storage-windows",
+    "crates/capture-core",
+    "crates/capture-windows",
+    "crates/imaging",
+    "crates/annotation",
+    "crates/longshot",
+    "crates/ai-client",
+    "crates/ui-slint",
+    "crates/app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Snipe Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/snipe/snipe"
+
+[workspace.dependencies]
+# Internal crates
+domain = { path = "crates/domain" }
+config = { path = "crates/config" }
+secure-storage-windows = { path = "crates/secure-storage-windows" }
+capture-core = { path = "crates/capture-core" }
+capture-windows = { path = "crates/capture-windows" }
+imaging = { path = "crates/imaging" }
+annotation = { path = "crates/annotation" }
+longshot = { path = "crates/longshot" }
+ai-client = { path = "crates/ai-client" }
+ui-slint = { path = "crates/ui-slint" }
+
+# Common external dependencies
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = { version = "0.7", features = ["sync"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1.10", features = ["v4"] }
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+arboard = "3.4"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+slint = { version = "1.9.0", features = ["compat-1-2"] }
+slint-build = "1.9.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,81 @@
+export component PinWindow inherits Window {
+    in-out property <image> pin-image;
+    in-out property <float> opacity-level: 1.0;
+    in-out property <bool> is-always-on-top: true;
+    in-out property <bool> show-controls: false;
+
+    callback close-clicked();
+    callback copy-clicked();
+    callback save-clicked();
+    callback ocr-clicked();
+    callback translate-clicked();
+    callback adjust-opacity(float);
+
+    no-frame: true;
+    always-on-top: root.is-always-on-top;
+    background: transparent;
+
+    TouchArea {
+        width: 100%;
+        height: 100%;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.show-controls = !root.show-controls;
+            }
+        }
+
+        Image {
+            width: 100%;
+            height: 100%;
+            source: root.pin-image;
+            opacity: root.opacity-level;
+        }
+    }
+
+    // Floating overlay bar on hover/click
+    if root.show-controls : Rectangle {
+        x: (parent.width - 240px) / 2;
+        y: 8px;
+        width: 240px;
+        height: 36px;
+        background: #181818EE;
+        border-radius: 6px;
+        border-color: #333333;
+        border-width: 1px;
+
+        HorizontalLayout {
+            padding: 4px;
+            spacing: 6px;
+            alignment: center;
+
+            Rectangle {
+                width: 44px;
+                background: #2A2A2A;
+                border-radius: 4px;
+                Text { text: "复制"; color: #FFFFFF; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.copy-clicked(); } }
+            }
+            Rectangle {
+                width: 44px;
+                background: #2A2A2A;
+                border-radius: 4px;
+                Text { text: "保存"; color: #FFFFFF; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.save-clicked(); } }
+            }
+            Rectangle {
+                width: 44px;
+                background: #2A2A2A;
+                border-radius: 4px;
+                Text { text: "OCR"; color: #FFFFFF; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.ocr-clicked(); } }
+            }
+            Rectangle {
+                width: 32px;
+                background: #C42B1C;
+                border-radius: 4px;
+                Text { text: "✕"; color: #FFFFFF; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.close-clicked(); } }
+            }
+        }
+    }
+}

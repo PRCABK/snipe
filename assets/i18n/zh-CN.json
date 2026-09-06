@@ -1,0 +1,24 @@
+{
+  "app_name": "Snipe",
+  "tray": {
+    "screenshot": "截取屏幕 (F1)",
+    "longshot": "滚动长截图 (Ctrl+Alt+S)",
+    "color_picker": "屏幕取色 (F3)",
+    "settings": "偏好设置",
+    "exit": "退出 Snipe"
+  },
+  "overlay": {
+    "copy": "复制",
+    "save": "保存",
+    "pin": "钉图",
+    "annotate": "标注",
+    "ocr": "OCR",
+    "translate": "翻译"
+  },
+  "settings": {
+    "title": "Snipe 参数设置",
+    "hotkeys": "全局快捷键",
+    "ai_service": "AI 视觉服务 (OCR / 翻译)",
+    "save": "保存配置"
+  }
+}
