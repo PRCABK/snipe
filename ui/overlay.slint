@@ -1,5 +1,3 @@
-import { Button } from "std-widgets.slint";
-
 export component OverlayWindow inherits Window {
     in-out property <int> selection-x: 0;
     in-out property <int> selection-y: 0;
@@ -9,12 +7,13 @@ export component OverlayWindow inherits Window {
     in-out property <string> dimension-text: "";
     in-out property <string> color-hex: "#000000";
     in-out property <string> color-rgb: "rgb(0,0,0)";
+    in-out property <color> preview-color: #000000;
     in-out property <int> mouse-x: 0;
     in-out property <int> mouse-y: 0;
 
-    callback pointer-down(int, int);
-    callback pointer-move(int, int);
-    callback pointer-up(int, int);
+    callback pointer-down(float, float);
+    callback pointer-move(float, float);
+    callback pointer-up(float, float);
     callback action-copy();
     callback action-save();
     callback action-pin();
@@ -161,7 +160,7 @@ export component OverlayWindow inherits Window {
                 border-radius: 4px;
                 border-color: #666666;
                 border-width: 1px;
-                background: @color-hex;
+                background: root.preview-color;
             }
 
             VerticalLayout {

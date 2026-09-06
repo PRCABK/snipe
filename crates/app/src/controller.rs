@@ -2,7 +2,7 @@ use ai_client::{OpenAiVisionClient, VisionProvider};
 use capture_core::{CaptureService, CaptureTarget};
 use capture_windows::WindowsCaptureService;
 use config::AppConfig;
-use domain::{DesktopPxPoint, DesktopPxRect, Frame, ImagePxRect};
+use domain::{Frame, ImagePxRect};
 use secure_storage_windows::{CredentialStorage, DEFAULT_TARGET_NAME};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -52,10 +52,12 @@ impl AppController {
         let overlay_clone = overlay.clone();
         let start_pos_down = start_pos.clone();
         overlay.on_pointer_down(move |x, y| {
-            *start_pos_down.borrow_mut() = Some((x, y));
+            let ix = x.round() as i32;
+            let iy = y.round() as i32;
+            *start_pos_down.borrow_mut() = Some((ix, iy));
             overlay_clone.set_has_selection(true);
-            overlay_clone.set_selection_x(x);
-            overlay_clone.set_selection_y(y);
+            overlay_clone.set_selection_x(ix);
+            overlay_clone.set_selection_y(iy);
             overlay_clone.set_selection_w(1);
             overlay_clone.set_selection_h(1);
         });
@@ -65,22 +67,27 @@ impl AppController {
         let start_pos_move = start_pos.clone();
         let frame_move = frame_ref.clone();
         overlay.on_pointer_move(move |x, y| {
-            overlay_clone.set_mouse_x(x);
-            overlay_clone.set_mouse_y(y);
+            let ix = x.round() as i32;
+            let iy = y.round() as i32;
+            overlay_clone.set_mouse_x(ix);
+            overlay_clone.set_mouse_y(iy);
 
             // Update real-time pixel color under mouse
             if let Some(ref frame) = *frame_move.borrow() {
-                if let Some(color) = frame.pixel_at(x as u32, y as u32) {
-                    overlay_clone.set_color_hex(color.to_hex_rgb().into());
-                    overlay_clone.set_color_rgb(color.to_rgb_str().into());
+                if ix >= 0 && iy >= 0 {
+                    if let Some(color) = frame.pixel_at(ix as u32, iy as u32) {
+                        overlay_clone.set_color_hex(color.to_hex_rgb().into());
+                        overlay_clone.set_color_rgb(color.to_rgb_str().into());
+                        overlay_clone.set_preview_color(slint::Color::from_argb_u8(color.a, color.r, color.g, color.b));
+                    }
                 }
             }
 
             if let Some((sx, sy)) = *start_pos_move.borrow() {
-                let rx = sx.min(x);
-                let ry = sy.min(y);
-                let rw = (sx - x).abs().max(1);
-                let rh = (sy - y).abs().max(1);
+                let rx = sx.min(ix);
+                let ry = sy.min(iy);
+                let rw = (sx - ix).abs().max(1);
+                let rh = (sy - iy).abs().max(1);
 
                 overlay_clone.set_selection_x(rx);
                 overlay_clone.set_selection_y(ry);

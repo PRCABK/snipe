@@ -24,11 +24,16 @@ export component PinWindow inherits Window {
             }
         }
 
-        Image {
+        Rectangle {
             width: 100%;
             height: 100%;
-            source: root.pin-image;
             opacity: root.opacity-level;
+
+            Image {
+                width: 100%;
+                height: 100%;
+                source: root.pin-image;
+            }
         }
     }
 
