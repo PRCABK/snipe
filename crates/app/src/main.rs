@@ -8,6 +8,7 @@ mod tray;
 
 use config::AppConfig;
 use domain::HotkeyAction;
+use slint::ComponentHandle;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -15,7 +16,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::unbounded_channel;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use ui_slint::{ComponentHandle, UpdateWindow};
+use ui_slint::UpdateWindow;
 
 fn wait_for_primary_exit(timeout: std::time::Duration) -> bool {
     let deadline = std::time::Instant::now() + timeout;
@@ -175,11 +176,7 @@ fn main() -> anyhow::Result<()> {
                         {
                             single_instance::IpcResponse::Busy
                         } else {
-                            let window = if let Some(window) =
-                                update_window_for_events.borrow().as_ref()
-                            {
-                                window.clone()
-                            } else {
+                            if update_window_for_events.borrow().is_none() {
                                 let window =
                                     UpdateWindow::new().expect("create update confirmation window");
                                 let pending_confirm = pending_update_reply_for_events.clone();
@@ -203,11 +200,12 @@ fn main() -> anyhow::Result<()> {
                                         let _ = window.hide();
                                     }
                                 });
-                                *update_window_for_events.borrow_mut() = Some(window.clone());
-                                window
-                            };
+                                *update_window_for_events.borrow_mut() = Some(window);
+                            }
                             *pending_update_reply_for_events.borrow_mut() = Some(request.response);
-                            let _ = window.show();
+                            if let Some(window) = update_window_for_events.borrow().as_ref() {
+                                let _ = window.show();
+                            }
                             continue;
                         }
                     }

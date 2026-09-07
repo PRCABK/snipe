@@ -268,11 +268,12 @@ impl AppController {
         let frame_origin_pin = frame_origin.clone();
         let selection_pin = selection_rect.clone();
         let selection_start_pin = selection_start.clone();
+        let pin_manager_pin = pin_manager.clone();
         overlay.on_action_pin(move || {
             if let Some(cropped) =
                 Self::get_selected_subframe(&frame_pin, &frame_origin_pin, &selection_pin)
             {
-                pin_manager.spawn_pin(cropped);
+                pin_manager_pin.spawn_pin(cropped);
             }
             Self::clear_capture_session_shared(
                 &overlays_pin,
@@ -740,7 +741,8 @@ impl AppController {
             let state_up = state_slot.clone();
             let window_up = window.as_weak();
             window.on_canvas_pointer_up(move |x, y| {
-                let Some(state) = state_up.borrow_mut().as_mut() else {
+                let mut state_borrow = state_up.borrow_mut();
+                let Some(state) = state_borrow.as_mut() else {
                     return;
                 };
                 let Some(start) = state.pointer_start.take() else {
