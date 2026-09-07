@@ -281,4 +281,19 @@ mod tests {
         assert!((roundtrip.x - logical.x).abs() < 1.0);
         assert!((roundtrip.y - logical.y).abs() < 1.0);
     }
+
+    #[test]
+    fn logical_to_desktop_rounds_within_one_physical_pixel_at_supported_dpi() {
+        let offset = DesktopPxPoint::new(-1920, 100);
+        let logical = LogicalPoint::new(321.4, 217.6);
+
+        for scale in [1.0, 1.5, 2.0] {
+            let desktop = logical_to_desktop(logical, scale, offset);
+            let expected_x = logical.x * scale + offset.x as f32;
+            let expected_y = logical.y * scale + offset.y as f32;
+
+            assert!((desktop.x as f32 - expected_x).abs() <= 0.5);
+            assert!((desktop.y as f32 - expected_y).abs() <= 0.5);
+        }
+    }
 }

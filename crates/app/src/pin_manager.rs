@@ -69,6 +69,10 @@ impl PinManager {
         id
     }
 
+    pub fn has_pins(&self) -> bool {
+        !self.pins.borrow().is_empty()
+    }
+
     pub fn close_all(&self) {
         for (_, item) in self.pins.borrow_mut().drain() {
             let _ = item.window.hide();

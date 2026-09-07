@@ -50,6 +50,10 @@ impl LongshotSession {
         self.frames.len()
     }
 
+    pub fn frames(&self) -> &[Frame] {
+        &self.frames
+    }
+
     pub fn duration(&self) -> std::time::Duration {
         self.start_time.elapsed()
     }

@@ -21,7 +21,7 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\snipe.exe
-CloseApplications=yes
+CloseApplications=no
 RestartApplications=no
 
 [Languages]
@@ -41,6 +41,26 @@ Name: "{autodesktop}\Snipe"; Filename: "{app}\snipe.exe"; Tasks: desktopicon
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Snipe"; ValueData: """{app}\snipe.exe"""; Flags: uninsdeletevalue; Tasks: autostart
+
+[Code]
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  if FileExists(ExpandConstant('{app}\snipe.exe')) then
+  begin
+    if not Exec(ExpandConstant('{app}\snipe.exe'), '--shutdown-for-update', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    begin
+      Result := '无法请求 Snipe 退出。请手动关闭 Snipe 后重试。';
+      exit;
+    end;
+    if ResultCode <> 0 then
+    begin
+      Result := 'Snipe 未在 75 秒内确认并退出，或仍有截图、长截图、标注、钉图任务。请完成或取消任务后重试升级。';
+      exit;
+    end;
+  end;
+end;
 
 [Run]
 Filename: "{app}\snipe.exe"; Description: "立即运行 Snipe"; Flags: nowait postinstall skipifsilent

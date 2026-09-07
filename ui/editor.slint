@@ -7,7 +7,6 @@ export component EditorToolbar inherits Rectangle {
 
     callback select-tool(string);
     callback select-color(string);
-    callback select-width(int);
     callback action-undo();
     callback action-redo();
     callback action-finish();
@@ -15,142 +14,94 @@ export component EditorToolbar inherits Rectangle {
 
     height: 44px;
     background: #1E1E1EF5;
-    border-radius: 8px;
+    border-radius: 6px;
     border-color: #333333;
     border-width: 1px;
-    drop-shadow-blur: 10px;
-    drop-shadow-color: #00000080;
 
     HorizontalLayout {
         padding: 6px;
         spacing: 6px;
         alignment: center;
 
-        // Tool buttons
-        Rectangle {
-            width: 32px;
-            background: root.active-tool == "rect" ? #0078D4 : #2B2B2B;
-            border-radius: 4px;
-            Text { text: "▢"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.select-tool("rect"); } }
-        }
-        Rectangle {
-            width: 32px;
-            background: root.active-tool == "ellipse" ? #0078D4 : #2B2B2B;
-            border-radius: 4px;
-            Text { text: "○"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.select-tool("ellipse"); } }
-        }
-        Rectangle {
-            width: 32px;
-            background: root.active-tool == "arrow" ? #0078D4 : #2B2B2B;
-            border-radius: 4px;
-            Text { text: "➔"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.select-tool("arrow"); } }
-        }
-        Rectangle {
-            width: 32px;
-            background: root.active-tool == "pen" ? #0078D4 : #2B2B2B;
-            border-radius: 4px;
-            Text { text: "✎"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.select-tool("pen"); } }
-        }
-        Rectangle {
-            width: 32px;
-            background: root.active-tool == "text" ? #0078D4 : #2B2B2B;
-            border-radius: 4px;
-            Text { text: "T"; color: #FFFFFF; font-size: 14px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.select-tool("text"); } }
-        }
-        Rectangle {
-            width: 32px;
-            background: root.active-tool == "mosaic" ? #0078D4 : #2B2B2B;
-            border-radius: 4px;
-            Text { text: "▦"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.select-tool("mosaic"); } }
-        }
-        Rectangle {
-            width: 32px;
-            background: root.active-tool == "step" ? #0078D4 : #2B2B2B;
-            border-radius: 4px;
-            Text { text: "①"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.select-tool("step"); } }
-        }
-
-        // Separator
+        Rectangle { width: 32px; background: root.active-tool == "rect" ? #0078D4 : #2B2B2B; border-radius: 4px; Text { text: "□"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.select-tool("rect"); } } }
+        Rectangle { width: 32px; background: root.active-tool == "ellipse" ? #0078D4 : #2B2B2B; border-radius: 4px; Text { text: "○"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.select-tool("ellipse"); } } }
+        Rectangle { width: 32px; background: root.active-tool == "arrow" ? #0078D4 : #2B2B2B; border-radius: 4px; Text { text: "→"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.select-tool("arrow"); } } }
+        Rectangle { width: 32px; background: root.active-tool == "pen" ? #0078D4 : #2B2B2B; border-radius: 4px; Text { text: "P"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.select-tool("pen"); } } }
+        Rectangle { width: 32px; background: root.active-tool == "mosaic" ? #0078D4 : #2B2B2B; border-radius: 4px; Text { text: "#"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.select-tool("mosaic"); } } }
+        Rectangle { width: 32px; background: root.active-tool == "step" ? #0078D4 : #2B2B2B; border-radius: 4px; Text { text: "1"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.select-tool("step"); } } }
         Rectangle { width: 1px; background: #444444; }
-
-        // Color buttons
-        Rectangle {
-            width: 20px;
-            height: 20px;
-            border-radius: 10px;
-            background: #FF3B30;
-            border-color: root.active-color == "#FF3B30" ? #FFFFFF : transparent;
-            border-width: 2px;
-            TouchArea { clicked => { root.select-color("#FF3B30"); } }
-        }
-        Rectangle {
-            width: 20px;
-            height: 20px;
-            border-radius: 10px;
-            background: #34C759;
-            border-color: root.active-color == "#34C759" ? #FFFFFF : transparent;
-            border-width: 2px;
-            TouchArea { clicked => { root.select-color("#34C759"); } }
-        }
-        Rectangle {
-            width: 20px;
-            height: 20px;
-            border-radius: 10px;
-            background: #007AFF;
-            border-color: root.active-color == "#007AFF" ? #FFFFFF : transparent;
-            border-width: 2px;
-            TouchArea { clicked => { root.select-color("#007AFF"); } }
-        }
-        Rectangle {
-            width: 20px;
-            height: 20px;
-            border-radius: 10px;
-            background: #FFCC00;
-            border-color: root.active-color == "#FFCC00" ? #FFFFFF : transparent;
-            border-width: 2px;
-            TouchArea { clicked => { root.select-color("#FFCC00"); } }
-        }
-
-        // Separator
+        Rectangle { width: 20px; height: 20px; border-radius: 10px; background: #FF3B30; border-color: root.active-color == "#FF3B30" ? #FFFFFF : transparent; border-width: 2px; TouchArea { clicked => { root.select-color("#FF3B30"); } } }
+        Rectangle { width: 20px; height: 20px; border-radius: 10px; background: #34C759; border-color: root.active-color == "#34C759" ? #FFFFFF : transparent; border-width: 2px; TouchArea { clicked => { root.select-color("#34C759"); } } }
+        Rectangle { width: 20px; height: 20px; border-radius: 10px; background: #007AFF; border-color: root.active-color == "#007AFF" ? #FFFFFF : transparent; border-width: 2px; TouchArea { clicked => { root.select-color("#007AFF"); } } }
+        Rectangle { width: 20px; height: 20px; border-radius: 10px; background: #FFCC00; border-color: root.active-color == "#FFCC00" ? #FFFFFF : transparent; border-width: 2px; TouchArea { clicked => { root.select-color("#FFCC00"); } } }
         Rectangle { width: 1px; background: #444444; }
+        Rectangle { width: 30px; background: root.can-undo ? #2B2B2B : #1A1A1A; border-radius: 4px; Text { text: "↶"; color: root.can-undo ? #FFFFFF : #666666; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { if (root.can-undo) { root.action-undo(); } } } }
+        Rectangle { width: 30px; background: root.can-redo ? #2B2B2B : #1A1A1A; border-radius: 4px; Text { text: "↷"; color: root.can-redo ? #FFFFFF : #666666; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { if (root.can-redo) { root.action-redo(); } } } }
+        Rectangle { width: 36px; background: #28A745; border-radius: 4px; Text { text: "完成"; color: #FFFFFF; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.action-finish(); } } }
+        Rectangle { width: 36px; background: #DC3545; border-radius: 4px; Text { text: "取消"; color: #FFFFFF; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; } TouchArea { clicked => { root.action-cancel(); } } }
+    }
+}
 
-        // Undo / Redo
-        Rectangle {
-            width: 30px;
-            background: root.can-undo ? #2B2B2B : #1A1A1A;
-            border-radius: 4px;
-            Text { text: "↶"; color: root.can-undo ? #FFFFFF : #666666; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { if (root.can-undo) { root.action-undo(); } } }
-        }
-        Rectangle {
-            width: 30px;
-            background: root.can-redo ? #2B2B2B : #1A1A1A;
-            border-radius: 4px;
-            Text { text: "↷"; color: root.can-redo ? #FFFFFF : #666666; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { if (root.can-redo) { root.action-redo(); } } }
-        }
+export component EditorWindow inherits Window {
+    in-out property <image> editor-image;
+    in-out property <string> active-tool: "rect";
+    in-out property <string> active-color: "#FF3B30";
+    in-out property <bool> can-undo: false;
+    in-out property <bool> can-redo: false;
 
-        // Finish & Cancel
-        Rectangle {
-            width: 36px;
-            background: #28A745;
-            border-radius: 4px;
-            Text { text: "✓"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.action-finish(); } }
+    callback canvas-pointer-down(float, float);
+    callback canvas-pointer-move(float, float);
+    callback canvas-pointer-up(float, float);
+    callback select-tool(string);
+    callback select-color(string);
+    callback action-undo();
+    callback action-redo();
+    callback action-finish();
+    callback action-cancel();
+
+    title: "截图标注";
+    width: 1000px;
+    height: 720px;
+    background: #151515;
+    default-font-family: "Segoe UI, Microsoft YaHei, sans-serif";
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 10px;
+        EditorToolbar {
+            active-tool: root.active-tool;
+            active-color: root.active-color;
+            can-undo: root.can-undo;
+            can-redo: root.can-redo;
+            select-tool(tool) => { root.select-tool(tool); }
+            select-color(color) => { root.select-color(color); }
+            action-undo => { root.action-undo(); }
+            action-redo => { root.action-redo(); }
+            action-finish => { root.action-finish(); }
+            action-cancel => { root.action-cancel(); }
         }
         Rectangle {
-            width: 36px;
-            background: #DC3545;
-            border-radius: 4px;
-            Text { text: "✕"; color: #FFFFFF; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { root.action-cancel(); } }
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+            background: #252525;
+            Image {
+                width: 100%;
+                height: 100%;
+                source: root.editor-image;
+                image-fit: fill;
+            }
+            TouchArea {
+                width: 100%;
+                height: 100%;
+                pointer-event(event) => {
+                    if (event.kind == PointerEventKind.down) {
+                        root.canvas-pointer-down(self.mouse-x / self.width, self.mouse-y / self.height);
+                    } else if (event.kind == PointerEventKind.up) {
+                        root.canvas-pointer-up(self.mouse-x / self.width, self.mouse-y / self.height);
+                    }
+                }
+                moved => { root.canvas-pointer-move(self.mouse-x / self.width, self.mouse-y / self.height); }
+            }
         }
     }
 }

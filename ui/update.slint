@@ -1,0 +1,47 @@
+export component UpdateWindow inherits Window {
+    callback action-confirm();
+    callback action-cancel();
+
+    title: "准备升级";
+    width: 360px;
+    height: 172px;
+    background: #202020;
+    default-font-family: "Segoe UI, Microsoft YaHei, sans-serif";
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+
+        Text {
+            text: "Snipe 即将退出以完成升级";
+            color: #FFFFFF;
+            font-size: 17px;
+            font-weight: 600;
+        }
+        Text {
+            text: "确认后会关闭托盘、快捷键和所有窗口。";
+            color: #C8C8C8;
+            font-size: 12px;
+        }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            Rectangle {
+                width: 72px;
+                height: 32px;
+                background: #333333;
+                border-radius: 4px;
+                Text { text: "取消"; color: #FFFFFF; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.action-cancel(); } }
+            }
+            Rectangle {
+                width: 72px;
+                height: 32px;
+                background: #0078D4;
+                border-radius: 4px;
+                Text { text: "确认退出"; color: #FFFFFF; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.action-confirm(); } }
+            }
+        }
+    }
+}

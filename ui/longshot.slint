@@ -1,0 +1,89 @@
+export component LongshotWindow inherits Window {
+    in-out property <int> frame-count: 0;
+    in-out property <int> captured-height: 0;
+    in-out property <string> status-text: "框选滚动区域后，滚动内容并采集帧";
+    in-out property <bool> can-finish: false;
+    in-out property <bool> has-result: false;
+
+    callback action-capture-frame();
+    callback action-finish();
+    callback action-copy();
+    callback action-save();
+    callback action-cancel();
+
+    title: "滚动长截图";
+    width: 420px;
+    height: 212px;
+    background: #202020;
+    default-font-family: "Segoe UI, Microsoft YaHei, sans-serif";
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 12px;
+
+        Text {
+            text: "滚动长截图";
+            color: #FFFFFF;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        Text {
+            text: root.status-text;
+            color: #C8C8C8;
+            font-size: 12px;
+            wrap: word-wrap;
+            height: 34px;
+        }
+        Text {
+            text: "已采集 " + root.frame-count + " 帧  ·  预估高度 " + root.captured-height + " px";
+            color: #8FC7FF;
+            font-size: 12px;
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: center;
+
+            Rectangle {
+                width: 84px;
+                height: 32px;
+                background: #0078D4;
+                border-radius: 4px;
+                Text { text: "采集帧"; color: #FFFFFF; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.action-capture-frame(); } }
+            }
+            Rectangle {
+                width: 84px;
+                height: 32px;
+                background: root.can-finish ? #2F9E44 : #333333;
+                border-radius: 4px;
+                Text { text: "结束拼接"; color: root.can-finish ? #FFFFFF : #777777; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { if (root.can-finish) { root.action-finish(); } } }
+            }
+            Rectangle {
+                width: 56px;
+                height: 32px;
+                background: root.has-result ? #2D2D2D : #333333;
+                border-radius: 4px;
+                Text { text: "复制"; color: root.has-result ? #FFFFFF : #777777; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { if (root.has-result) { root.action-copy(); } } }
+            }
+            Rectangle {
+                width: 56px;
+                height: 32px;
+                background: root.has-result ? #2D2D2D : #333333;
+                border-radius: 4px;
+                Text { text: "保存"; color: root.has-result ? #FFFFFF : #777777; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { if (root.has-result) { root.action-save(); } } }
+            }
+            Rectangle {
+                width: 48px;
+                height: 32px;
+                background: #B3261E;
+                border-radius: 4px;
+                Text { text: "取消"; color: #FFFFFF; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                TouchArea { clicked => { root.action-cancel(); } }
+            }
+        }
+    }
+}
