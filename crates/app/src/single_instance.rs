@@ -108,7 +108,7 @@ pub fn request_from_primary_with_timeout(
         std::thread::spawn(move || {
             let _ = response_tx.send(request_from_primary_blocking(command));
         });
-        return response_rx.recv_timeout(timeout).ok().flatten();
+        response_rx.recv_timeout(timeout).ok().flatten()
     }
 
     #[cfg(not(windows))]

@@ -77,7 +77,7 @@ impl AppController {
         let capture_service = Arc::new(WindowsCaptureService::new());
         let pin_manager = PinManager::new();
 
-        let controller = Self {
+        Self {
             capture_service,
             pin_manager,
             overlays: Rc::new(RefCell::new(Vec::new())),
@@ -92,9 +92,7 @@ impl AppController {
             editor_state: Rc::new(RefCell::new(None)),
             settings_window: Rc::new(RefCell::new(None)),
             ai_window: Rc::new(RefCell::new(None)),
-        };
-
-        controller
+        }
     }
 
     #[allow(clippy::too_many_arguments)]

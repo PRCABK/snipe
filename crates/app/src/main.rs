@@ -120,7 +120,9 @@ fn main() -> anyhow::Result<()> {
     // not Send because it owns Slint windows and Rc-backed UI state.
     let controller = Rc::new(controller::AppController::new());
     let update_window = Rc::new(RefCell::new(None::<UpdateWindow>));
-    let pending_update_reply = Rc::new(RefCell::new(None));
+    let pending_update_reply = Rc::new(RefCell::new(
+        None::<std::sync::mpsc::Sender<single_instance::IpcResponse>>,
+    ));
 
     // 9. Drain native/IPC events from the Slint thread. Moving AppController
     // into tokio::spawn would require its Slint windows to be Send.
