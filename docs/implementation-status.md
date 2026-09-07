@@ -2,6 +2,8 @@
 
 Audit basis: `PLAN.md` v0.3 and the repository state at the time of this review.
 
+How to close the gaps: [`repair-plan.md`](repair-plan.md). That document is the execution plan; this file remains the audit snapshot and must be updated when a repair-plan item is completed.
+
 ## Release decision
 
 **NO-GO for a stable or feature-complete release.**

@@ -4,7 +4,7 @@
 
 Snipe 使用 Rust、Slint 与 Win32 构建。当前仓库包含 GDI 截图、区域选择、复制/保存、多钉图基础窗口、AI OCR/翻译调用、标注栅格化和长图拼接等基础实现，但尚未完成 `PLAN.md` 定义的端到端 MVP，不应作为稳定正式版发布。
 
-当前完成度和发布阻塞项见 [`docs/implementation-status.md`](docs/implementation-status.md)。
+当前完成度和发布阻塞项见 [`docs/implementation-status.md`](docs/implementation-status.md)。缺口闭合顺序与验收标准见 [`docs/repair-plan.md`](docs/repair-plan.md)。
 
 ---
 

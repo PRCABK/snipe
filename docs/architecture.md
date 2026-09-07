@@ -2,6 +2,8 @@
 
 本文档描述 Snipe 截图工具的分层设计、模块职责与并发通信流。
 
+当前实现缺口与修复顺序见 [`repair-plan.md`](repair-plan.md)；审计结论见 [`implementation-status.md`](implementation-status.md)。
+
 ## 1. 架构拓扑
 
 ```text

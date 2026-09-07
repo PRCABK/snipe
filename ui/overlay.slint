@@ -1,4 +1,8 @@
 export component OverlayWindow inherits Window {
+    // Captured frame of the monitor this overlay covers. Drawn 1:1 in
+    // physical pixels (the window is sized/positioned from the monitor's
+    // physical bounds by the controller).
+    in-out property <image> capture-image;
     in-out property <int> selection-x: 0;
     in-out property <int> selection-y: 0;
     in-out property <int> selection-w: 0;
@@ -25,8 +29,10 @@ export component OverlayWindow inherits Window {
     default-font-family: "Segoe UI, Microsoft YaHei, sans-serif";
     no-frame: true;
     always-on-top: true;
-    background: #00000028;
+    background: black;
 
+    // Input capture (bottom-most visual, receives clicks that miss the
+    // toolbar buttons and the FocusScope only handles keys).
     TouchArea {
         width: 100%;
         height: 100%;
@@ -40,6 +46,46 @@ export component OverlayWindow inherits Window {
         moved => {
             root.pointer-move(self.mouse-x / 1px, self.mouse-y / 1px);
         }
+    }
+
+    // The captured desktop frame, fullscreen.
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.capture-image;
+    }
+
+    // Dim everything while no selection exists.
+    if !root.has-selection : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #00000059;
+    }
+
+    // Dim the area outside the selection (selection stays bright).
+    if root.has-selection : Rectangle {
+        width: 100%;
+        height: root.selection-y * 1px;
+        background: #00000059;
+    }
+    if root.has-selection : Rectangle {
+        y: (root.selection-y + root.selection-h) * 1px;
+        width: root.width;
+        height: root.height - (root.selection-y + root.selection-h) * 1px;
+        background: #00000059;
+    }
+    if root.has-selection : Rectangle {
+        y: root.selection-y * 1px;
+        width: root.selection-x * 1px;
+        height: root.selection-h * 1px;
+        background: #00000059;
+    }
+    if root.has-selection : Rectangle {
+        x: (root.selection-x + root.selection-w) * 1px;
+        y: root.selection-y * 1px;
+        width: root.width - (root.selection-x + root.selection-w) * 1px;
+        height: root.selection-h * 1px;
+        background: #00000059;
     }
 
     // Selection border box
@@ -169,6 +215,24 @@ export component OverlayWindow inherits Window {
                 Text { text: root.color-hex; color: #FFFFFF; font-size: 11px; font-weight: 600; }
                 Text { text: root.color-rgb; color: #AAAAAA; font-size: 9px; }
             }
+        }
+    }
+
+    // Escape key cancels the overlay without exiting the process.
+    // No focus-on-click: it would swallow the first press before the
+    // TouchArea sees it, breaking selection dragging.
+    focus-scope := FocusScope {
+        width: 100%;
+        height: 100%;
+        init => {
+            self.focus();
+        }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.action-cancel();
+                return accept;
+            }
+            return reject;
         }
     }
 }

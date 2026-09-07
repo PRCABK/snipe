@@ -19,3 +19,4 @@ Cargo.lock.dist
 # Local config & logs
 /logs/
 /cache/
+.claude
